@@ -1,5 +1,5 @@
 import './App.css'
-import ProfilView from './components/views/ProfilView';
+import ProfilView from './components/views/profil/ProfilView.jsx';
 
 function App() {
 
