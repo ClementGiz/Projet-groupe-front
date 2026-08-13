@@ -33,7 +33,7 @@ function Footer() {
                             Contact:
                         </h3>
                         <p className="text-gray-400">
-                            contact@monprojet.fr
+                          monprojet@campus-eni.fr
                         </p>
                     </div>
 

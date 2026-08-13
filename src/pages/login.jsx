@@ -22,10 +22,7 @@ function Login() {
 
                     {/* Email */}
                     <div>
-                        <label
-                            htmlFor="email"
-                            className="block text-sm font-medium text-gray-700 mb-2"
-                        >
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                             Adresse email
                         </label>
 
@@ -40,10 +37,7 @@ function Login() {
 
                     {/* Mot de passe */}
                     <div>
-                        <label
-                            htmlFor="password"
-                            className="block text-sm font-medium text-gray-700 mb-2"
-                        >
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                             Mot de passe
                         </label>
 
@@ -58,19 +52,13 @@ function Login() {
 
                     {/* Mot de passe oublié */}
                     <div className="flex justify-end">
-                        <a
-                            href="#"
-                            className="text-sm text-blue-600 hover:text-blue-700"
-                        >
+                        <a href="#" className="text-sm text-blue-600 hover:text-blue-700">
                             Mot de passe oublié ?
                         </a>
                     </div>
 
                     {/* Bouton */}
-                    <button
-                        type="submit"
-                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-                    >
+                    <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
                         Se connecter
                     </button>
 
