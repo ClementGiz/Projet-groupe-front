@@ -1,5 +1,5 @@
 import React from 'react';
-import { styles } from '../views/RefAdmin/styles.js';
+import { styles } from '../../views/RefAdmin/styles.js';
 
 export function PromoEditModal({ isOpen, form, onChange, onSubmit, onClose }) {
     if (!isOpen) return null;
