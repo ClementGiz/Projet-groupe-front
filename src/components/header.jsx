@@ -36,10 +36,6 @@ function Header() {
                         Contact
                     </Link>
 
-                    <Link to="/login" className="border border-white text-white px-5 py-2 rounded-full hover:bg-white hover:text-blue-700 transition">
-                        Connexion
-                    </Link>
-
                     <Link to="/register" className="bg-yellow-400 text-blue-900 font-semibold px-5 py-2 rounded-full hover:bg-yellow-300 transition">
                         Inscription
                     </Link>
