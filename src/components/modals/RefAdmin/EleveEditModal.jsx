@@ -1,5 +1,5 @@
 import React from 'react';
-import { styles } from './styles';
+import { styles } from '../views/RefAdmin/styles.js';
 
 export function EleveEditModal({ isOpen, name, onChange, onSubmit, onClose }) {
     if (!isOpen) return null;
