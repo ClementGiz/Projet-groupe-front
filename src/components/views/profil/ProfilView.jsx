@@ -131,10 +131,10 @@ export default function ProfilView() {
 
     const renderRoleBadge = (role) => {
         const rolesMap = {
-            ADMIN: { label: 'Administrateur', color: 'bg-purple-100 text-purple-700' },
-            REF: { label: 'Référente Administrative', color: 'bg-blue-100 text-blue-700' },
-            FORMATEUR: { label: 'Formateur', color: 'bg-amber-100 text-amber-700' },
-            ELEVE: { label: 'Élève', color: 'bg-emerald-100 text-emerald-700' },
+            ADMIN: { label: 'Administrateur', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+            REF: { label: 'Référente Administrative', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+            FORMATEUR: { label: 'Formateur', color: 'bg-amber-50 text-amber-800 border-amber-200' },
+            ELEVE: { label: 'Élève', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
         };
 
         const currentRole = rolesMap[role] || { label: role, color: 'bg-slate-100 text-slate-700' };
@@ -157,15 +157,15 @@ export default function ProfilView() {
     }
 
     return (
-        <div className="relative bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-xl mx-auto w-full space-y-5">
+        <div className="relative bg-white p-6 rounded-lg border border-slate-200 shadow-sm max-w-xl mx-auto w-full space-y-5">
 
-            {/* Toast Notification */}
+            {/* --- NOTIFICATION FLASH LOCAL (TOAST) ---*/}
             {toast && (
                 <div
-                    className={`p-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-between ${
+                    className={`p-3 rounded-lg text-sm font-normal transition-all duration-300 flex items-center justify-between border ${
                         toast.type === 'success'
-                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                            : 'bg-rose-50 text-rose-800 border border-rose-200'
+                            ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                            : 'bg-red-50 text-red-900 border-red-200'
                     }`}
                 >
                     <span>{toast.message}</span>
@@ -178,28 +178,30 @@ export default function ProfilView() {
                 </div>
             )}
 
-            {/* En-tête */}
-            <div className="border-b pb-4 flex items-center justify-between">
+            {/* --- EN-TÊTE DU PROFIL --- */}
+            <div className="border-b border-slate-200 pb-4 flex items-center justify-between">
                 <div>
-                    <h2 className="font-bold text-lg text-slate-900">Mon Profil</h2>
-                    <p className="text-xs text-slate-500">@{formData.username}</p>
+                    <h2 className="font-semibold text-lg text-slate-900">Mon Profil</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">@{formData.username}</p>
                 </div>
                 <div>{renderRoleBadge(formData.role)}</div>
             </div>
 
-            {/* Formulaire */}
-            <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+            {/* --- FORMULAIRE D'ÉDITION --- */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+
 
                 {formData.promotion_name && (
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                        <span className="block text-xs font-semibold text-slate-400 uppercase">Promotion</span>
-                        <span className="text-slate-700 font-medium">{formData.promotion_name}</span>
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <span className="block text-xs text-slate-500 uppercase font-medium mb-0.5">Promotion</span>
+                        <span className="text-sm text-slate-900 font-normal">{formData.promotion_name}</span>
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                {/* --- CHAMPS FORMULAIRES ---*/}
+                <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                        <label className="block text-xs font-medium text-slate-500 mb-1">
                             Prénom
                         </label>
                         <input
@@ -207,12 +209,12 @@ export default function ProfilView() {
                             name="first_name"
                             value={formData.first_name}
                             onChange={handleChange}
-                            className="w-full p-2 border rounded-lg bg-white border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full p-2.5 text-sm font-normal text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                        <label className="block text-xs font-medium text-slate-500 mb-1">
                             Nom
                         </label>
                         <input
@@ -220,13 +222,13 @@ export default function ProfilView() {
                             name="last_name"
                             value={formData.last_name}
                             onChange={handleChange}
-                            className="w-full p-2 border rounded-lg bg-white border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full p-2.5 text-sm font-normal text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
                         />
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                    <label className="block text-xs font-medium text-slate-500 mb-1">
                         Adresse Email
                     </label>
                     <input
@@ -234,12 +236,12 @@ export default function ProfilView() {
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full p-2 border rounded-lg bg-white border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full p-2.5 text-sm font-normal text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                    <label className="block text-xs font-medium text-slate-500 mb-1">
                         Nouveau mot de passe
                     </label>
                     <input
@@ -248,16 +250,19 @@ export default function ProfilView() {
                         placeholder="Laissez vide pour conserver l'actuel"
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full p-2 border rounded-lg bg-white border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full p-2.5 text-sm font-normal text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition placeholder:text-slate-400"
                     />
                 </div>
 
-                <button
-                    type="submit"
-                    className="w-full bg-indigo-600 text-white p-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm active:scale-[0.98]"
-                >
-                    Sauvegarder les modifications
-                </button>
+                {/* --- BOUTON D'ACTION PRINCIPALE --- */}
+                <div className="pt-2">
+                    <button
+                        type="submit"
+                        className="w-full bg-blue-600 text-white p-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm active:scale-[0.99] cursor-pointer"
+                    >
+                        Sauvegarder les modifications
+                    </button>
+                </div>
             </form>
         </div>
     );
