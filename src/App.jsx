@@ -2,7 +2,8 @@ import './App.css'
 import {getCurrentUser, logout,} from "./services/authService";
 import {RefadminView} from "./components/views/RefAdmin/RefAdminView.jsx";
 import {useEffect, useState} from "react";
-import Login from "./pages/login.jsx";
+import {Login} from "./components/views/Authenfication/Authentification.jsx";
+import {AdminView} from "./components/Views/Administrateur/AdminView.jsx";
 
 
 
@@ -46,15 +47,15 @@ export const App = () => {
 
     switch (user.role) {
 
-      /*  case "ADMIN":
+        case "ADMIN":
             return (
                 <AdminView
                     user={user}
                     onLogout={handleLogout}
                 />
-            );*/
+            );
 
-        case "REF":
+        /*case "REF":
             return (
                 <RefadminView
                     user={user}
