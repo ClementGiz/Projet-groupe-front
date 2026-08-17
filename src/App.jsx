@@ -2,7 +2,7 @@ import './App.css'
 import {getCurrentUser, logout,} from "./services/authService";
 import {RefadminView} from "./components/views/RefAdmin/RefAdminView.jsx";
 import {useEffect, useState} from "react";
-import {Login} from "./components/views/Authenfication/Authentification.jsx";
+import Login from "./pages/login.jsx";
 
 
 
