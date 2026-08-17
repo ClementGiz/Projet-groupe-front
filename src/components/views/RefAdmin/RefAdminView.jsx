@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { styles } from './styles';
 import { FiliereModal } from '../../modals/RefAdmin/FiliereModal';
 import { CursusModal } from '../../modals/RefAdmin/CursusModal';
 import { PromoModal } from '../../modals/RefAdmin/PromoModal';
+import { CoursDonneModal } from '../../modals/RefAdmin/CoursDonneModal';
+import { PlanningView } from './PlanningView';
 import {
     getFilieres, createFiliere, updateFiliere,
     getCursusList, createCursus, updateCursus,
     getPromotions, createPromotion, updatePromotion,
     getEleves, updateEleve,
-} from '../../../services/refadminService';
-
+    getFormateurs,
+    getCoursDonnes, createCoursDonne, updateCoursDonne, deleteCoursDonne,
+} from '../../../services/refadminService.js';
 
 const TABS = [
     { key: "filieres", label: "Filières" },
@@ -28,6 +30,14 @@ const ADD_ACTION_LABELS = {
 const emptyFiliereForm = { code: "", nom: "" };
 const emptyCursusForm = { filiere_id: "", code: "", libelle: "" };
 const emptyPromoForm = { filiere_id: "", nom: "", date_debut: "", date_fin: "" };
+const emptyCoursDonneForm = { promotion_id: "", cours_id: "", formateur_id: "", date_debut: "", date_fin: "" };
+
+const inputClass =
+    "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20";
+const thClass = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500";
+const tdClass = "px-3 py-3 text-sm text-slate-900";
+const editButtonClass =
+    "rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700";
 
 function isEnCours(dateDebut, dateFin) {
     if (!dateDebut || !dateFin) return false;
@@ -40,11 +50,22 @@ export function RefadminView() {
     const [cursusList, setCursusList] = useState([]);
     const [promotions, setPromotions] = useState([]);
     const [eleves, setEleves] = useState([]);
+    const [formateurs, setFormateurs] = useState([]);
+    const [coursDonnes, setCoursDonnes] = useState([]);
 
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(null);
 
     const [activeTab, setActiveTab] = useState("filieres");
+
+    // --- Toast de confirmation d'action ---
+    const [toast, setToast] = useState(null); // { message: string, type: 'success' | 'error' }
+
+    const showToast = (message, type = "success") => {
+        setToast({ message, type });
+        window.clearTimeout(showToast._t);
+        showToast._t = window.setTimeout(() => setToast(null), 2500);
+    };
 
     // --- Filière ---
     const [isFiliereModalOpen, setIsFiliereModalOpen] = useState(false);
@@ -64,21 +85,31 @@ export function RefadminView() {
     const [promoForm, setPromoForm] = useState(emptyPromoForm);
     const [promoError, setPromoError] = useState(null);
 
+    // --- Planning (CoursDonne) ---
+    const [isCoursDonneModalOpen, setIsCoursDonneModalOpen] = useState(false);
+    const [editingCoursDonneId, setEditingCoursDonneId] = useState(null);
+    const [coursDonneForm, setCoursDonneForm] = useState(emptyCoursDonneForm);
+    const [coursDonneError, setCoursDonneError] = useState(null);
+
     // --- Chargement initial ---
     const loadAll = async () => {
         setLoading(true);
         setLoadError(null);
         try {
-            const [filieresRes, cursusRes, promotionsRes, elevesRes] = await Promise.all([
+            const [filieresRes, cursusRes, promotionsRes, elevesRes, formateursRes, coursDonnesRes] = await Promise.all([
                 getFilieres(),
                 getCursusList(),
                 getPromotions(),
                 getEleves(),
+                getFormateurs(),
+                getCoursDonnes(),
             ]);
             setFilieres(filieresRes.data);
             setCursusList(cursusRes.data);
             setPromotions(promotionsRes.data);
             setEleves(elevesRes.data);
+            setFormateurs(formateursRes.data);
+            setCoursDonnes(coursDonnesRes.data);
         } catch (err) {
             setLoadError("Impossible de charger les données. Vérifie que l'API est bien démarrée.");
         } finally {
@@ -120,8 +151,10 @@ export function RefadminView() {
         try {
             if (editingFiliereId !== null) {
                 await updateFiliere(editingFiliereId, filiereForm);
+                showToast("Filière modifiée.");
             } else {
                 await createFiliere(filiereForm);
+                showToast("Filière ajoutée.");
             }
             await loadAll();
             closeFiliereModal();
@@ -164,8 +197,10 @@ export function RefadminView() {
         try {
             if (editingCursusId !== null) {
                 await updateCursus(editingCursusId, cursusForm);
+                showToast("Cursus modifié.");
             } else {
                 await createCursus(cursusForm);
+                showToast("Cursus ajouté.");
             }
             await loadAll();
             closeCursusModal();
@@ -209,13 +244,83 @@ export function RefadminView() {
         try {
             if (editingPromoId !== null) {
                 await updatePromotion(editingPromoId, promoForm);
+                showToast("Promotion modifiée.");
             } else {
                 await createPromotion(promoForm);
+                showToast("Promotion ajoutée.");
             }
             await loadAll();
             closePromoModal();
         } catch (err) {
             setPromoError("Erreur lors de l'enregistrement de la promotion.");
+        }
+    };
+
+    // --- Planning : handlers ---
+    const openAddCoursDonneModal = () => {
+        setEditingCoursDonneId(null);
+        setCoursDonneForm(emptyCoursDonneForm);
+        setCoursDonneError(null);
+        setIsCoursDonneModalOpen(true);
+    };
+
+    const openEditCoursDonneModal = (cd) => {
+        setEditingCoursDonneId(cd.id);
+        setCoursDonneForm({
+            promotion_id: String(cd.promotion?.id ?? ""),
+            cours_id: String(cd.cours?.id ?? ""),
+            formateur_id: String(cd.formateur?.id ?? ""),
+            date_debut: cd.date_debut,
+            date_fin: cd.date_fin ?? "",
+        });
+        setCoursDonneError(null);
+        setIsCoursDonneModalOpen(true);
+    };
+
+    const closeCoursDonneModal = () => {
+        setIsCoursDonneModalOpen(false);
+        setEditingCoursDonneId(null);
+        setCoursDonneForm(emptyCoursDonneForm);
+        setCoursDonneError(null);
+    };
+
+    const handleCoursDonneSubmit = async (e) => {
+        e.preventDefault();
+        if (!coursDonneForm.promotion_id || !coursDonneForm.cours_id || !coursDonneForm.formateur_id || !coursDonneForm.date_debut) {
+            return;
+        }
+
+        const payload = {
+            ...coursDonneForm,
+            date_fin: coursDonneForm.date_fin || null,
+        };
+
+        setCoursDonneError(null);
+        try {
+            if (editingCoursDonneId !== null) {
+                await updateCoursDonne(editingCoursDonneId, payload);
+                showToast("Séance modifiée.");
+            } else {
+                await createCoursDonne(payload);
+                showToast("Séance ajoutée au planning.");
+            }
+            await loadAll();
+            closeCoursDonneModal();
+        } catch (err) {
+            setCoursDonneError("Erreur lors de l'enregistrement de la séance.");
+        }
+    };
+
+    const handleCoursDonneDelete = async () => {
+        if (editingCoursDonneId === null) return;
+        setCoursDonneError(null);
+        try {
+            await deleteCoursDonne(editingCoursDonneId);
+            await loadAll();
+            closeCoursDonneModal();
+            showToast("Séance supprimée.");
+        } catch (err) {
+            setCoursDonneError("Erreur lors de la suppression de la séance.");
         }
     };
 
@@ -225,8 +330,9 @@ export function RefadminView() {
         try {
             await updateEleve(eleveId, { promotion_id: promotionId });
             await loadAll();
+            showToast("Élève réassigné.");
         } catch (err) {
-            // silencieux ici, on pourrait ajouter un message d'erreur global si besoin
+            showToast("Erreur lors de la réassignation.", "error");
         }
     };
 
@@ -257,28 +363,28 @@ export function RefadminView() {
         switch (activeTab) {
             case "filieres":
                 return (
-                    <table style={styles.table}>
+                    <table className="w-full border-collapse">
                         <thead>
-                        <tr>
-                            <th style={styles.th}>Code</th>
-                            <th style={styles.th}>Nom</th>
-                            <th style={styles.th}>Nb promotions</th>
-                            <th style={styles.th}></th>
+                        <tr className="border-b border-slate-200">
+                            <th className={thClass}>Code</th>
+                            <th className={thClass}>Nom</th>
+                            <th className={thClass + " text-right"}>Nb promotions</th>
+                            <th className={thClass}></th>
                         </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-slate-100">
                         {filieres.length === 0 ? (
-                            <tr><td style={styles.td} colSpan={4}>Aucune filière enregistrée.</td></tr>
+                            <tr><td className={tdClass + " italic text-slate-500"} colSpan={4}>Aucune filière enregistrée.</td></tr>
                         ) : (
                             filieres.map((f) => (
-                                <tr key={f.id}>
-                                    <td style={styles.td}>{f.code}</td>
-                                    <td style={styles.td}>{f.nom}</td>
-                                    <td style={styles.td}>
+                                <tr key={f.id} className="transition-colors hover:bg-slate-50">
+                                    <td className={tdClass}>{f.code}</td>
+                                    <td className={tdClass}>{f.nom}</td>
+                                    <td className={tdClass + " text-right"}>
                                         {promotions.filter((p) => p.filiere?.id === f.id).length}
                                     </td>
-                                    <td style={styles.actionTd}>
-                                        <button style={styles.editButton} onClick={() => openEditFiliereModal(f)} title="Modifier">
+                                    <td className={tdClass + " text-right"}>
+                                        <button className={editButtonClass} onClick={() => openEditFiliereModal(f)} title="Modifier">
                                             ✏️
                                         </button>
                                     </td>
@@ -291,26 +397,26 @@ export function RefadminView() {
 
             case "cursus":
                 return (
-                    <table style={styles.table}>
+                    <table className="w-full border-collapse">
                         <thead>
-                        <tr>
-                            <th style={styles.th}>Code</th>
-                            <th style={styles.th}>Libellé</th>
-                            <th style={styles.th}>Filière</th>
-                            <th style={styles.th}></th>
+                        <tr className="border-b border-slate-200">
+                            <th className={thClass}>Code</th>
+                            <th className={thClass}>Libellé</th>
+                            <th className={thClass}>Filière</th>
+                            <th className={thClass}></th>
                         </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-slate-100">
                         {cursusList.length === 0 ? (
-                            <tr><td style={styles.td} colSpan={4}>Aucun cursus enregistré.</td></tr>
+                            <tr><td className={tdClass + " italic text-slate-500"} colSpan={4}>Aucun cursus enregistré.</td></tr>
                         ) : (
                             cursusList.map((c) => (
-                                <tr key={c.id}>
-                                    <td style={styles.td}>{c.code}</td>
-                                    <td style={styles.td}>{c.libelle}</td>
-                                    <td style={styles.td}>{c.filiere?.nom}</td>
-                                    <td style={styles.actionTd}>
-                                        <button style={styles.editButton} onClick={() => openCursusEditModal(c)} title="Modifier">
+                                <tr key={c.id} className="transition-colors hover:bg-slate-50">
+                                    <td className={tdClass}>{c.code}</td>
+                                    <td className={tdClass}>{c.libelle}</td>
+                                    <td className={tdClass}>{c.filiere?.nom}</td>
+                                    <td className={tdClass + " text-right"}>
+                                        <button className={editButtonClass} onClick={() => openCursusEditModal(c)} title="Modifier">
                                             ✏️
                                         </button>
                                     </td>
@@ -323,51 +429,55 @@ export function RefadminView() {
 
             case "promotions":
                 return (
-                    <table style={styles.table}>
+                    <table className="w-full border-collapse">
                         <thead>
-                        <tr>
-                            <th style={styles.th}>Promotion</th>
-                            <th style={styles.th}>Filière</th>
-                            <th style={styles.th}>Dates</th>
-                            <th style={styles.th}>Statut</th>
-                            <th style={styles.th}>Élèves</th>
-                            <th style={styles.th}></th>
+                        <tr className="border-b border-slate-200">
+                            <th className={thClass}>Promotion</th>
+                            <th className={thClass}>Filière</th>
+                            <th className={thClass}>Dates</th>
+                            <th className={thClass}>Statut</th>
+                            <th className={thClass}>Élèves</th>
+                            <th className={thClass}></th>
                         </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-slate-100">
                         {promotions.length === 0 ? (
-                            <tr><td style={styles.td} colSpan={6}>Aucune promotion enregistrée.</td></tr>
+                            <tr><td className={tdClass + " italic text-slate-500"} colSpan={6}>Aucune promotion enregistrée.</td></tr>
                         ) : (
                             promotions.map((p) => {
                                 const enCours = isEnCours(p.date_debut, p.date_fin);
                                 const nbEleves = eleves.filter((e) => e.eleve_profile?.promotion?.id === p.id).length;
                                 return (
-                                    <tr key={p.id}>
-                                        <td style={styles.td}>{p.nom}</td>
-                                        <td style={styles.td}>{p.filiere?.nom}</td>
-                                        <td style={styles.td}>{p.date_debut} → {p.date_fin}</td>
-                                        <td style={styles.td}>
+                                    <tr key={p.id} className="transition-colors hover:bg-slate-50">
+                                        <td className={tdClass}>{p.nom}</td>
+                                        <td className={tdClass}>{p.filiere?.nom}</td>
+                                        <td className={tdClass + " text-slate-500"}>{p.date_debut} → {p.date_fin}</td>
+                                        <td className={tdClass}>
                                             <span
-                                                style={{
-                                                    ...styles.statusPill,
-                                                    ...(enCours ? styles.statusActive : styles.statusInactive),
-                                                }}
+                                                className={
+                                                    "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium " +
+                                                    (enCours
+                                                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                                        : "border-slate-200 bg-slate-100 text-slate-500")
+                                                }
                                             >
                                                 {enCours ? "En cours" : "Terminée"}
                                             </span>
                                         </td>
-                                        <td style={styles.td}>
+                                        <td className={tdClass}>
                                             <span
-                                                style={styles.badge}
+                                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
                                                 onClick={() => openPromoEditModal(p)}
                                                 title="Voir / gérer les élèves"
                                             >
                                                 Voir
-                                                <span style={styles.badgeCount}>{nbEleves}</span>
+                                                <span className="rounded-full bg-blue-600 px-1.5 text-[10px] font-semibold text-white">
+                                                    {nbEleves}
+                                                </span>
                                             </span>
                                         </td>
-                                        <td style={styles.actionTd}>
-                                            <button style={styles.editButton} onClick={() => openPromoEditModal(p)} title="Modifier">
+                                        <td className={tdClass + " text-right"}>
+                                            <button className={editButtonClass} onClick={() => openPromoEditModal(p)} title="Modifier">
                                                 ✏️
                                             </button>
                                         </td>
@@ -381,27 +491,27 @@ export function RefadminView() {
 
             case "eleves":
                 return (
-                    <table style={styles.table}>
+                    <table className="w-full border-collapse">
                         <thead>
-                        <tr>
-                            <th style={styles.th}>Nom</th>
-                            <th style={styles.th}>Email</th>
-                            <th style={styles.th}>Promotion actuelle</th>
-                            <th style={styles.th}>Réassigner</th>
+                        <tr className="border-b border-slate-200">
+                            <th className={thClass}>Nom</th>
+                            <th className={thClass}>Email</th>
+                            <th className={thClass}>Promotion actuelle</th>
+                            <th className={thClass}>Réassigner</th>
                         </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-slate-100">
                         {eleves.length === 0 ? (
-                            <tr><td style={styles.td} colSpan={4}>Aucun élève enregistré.</td></tr>
+                            <tr><td className={tdClass + " italic text-slate-500"} colSpan={4}>Aucun élève enregistré.</td></tr>
                         ) : (
                             eleves.map((e) => (
-                                <tr key={e.id}>
-                                    <td style={styles.td}>{e.first_name} {e.last_name}</td>
-                                    <td style={styles.td}>{e.email}</td>
-                                    <td style={styles.td}>{e.eleve_profile?.promotion?.nom ?? "—"}</td>
-                                    <td style={styles.td}>
+                                <tr key={e.id} className="transition-colors hover:bg-slate-50">
+                                    <td className={tdClass}>{e.first_name} {e.last_name}</td>
+                                    <td className={tdClass + " text-slate-500"}>{e.email}</td>
+                                    <td className={tdClass}>{e.eleve_profile?.promotion?.nom ?? "—"}</td>
+                                    <td className={tdClass}>
                                         <select
-                                            style={styles.select}
+                                            className={inputClass + " max-w-xs"}
                                             value={e.eleve_profile?.promotion?.id ?? ""}
                                             onChange={(ev) => handleReassignEleve(e.id, ev.target.value)}
                                         >
@@ -426,30 +536,41 @@ export function RefadminView() {
     };
 
     if (loading) {
-        return <div style={styles.section}>Chargement...</div>;
+        return (
+            <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+                Chargement...
+            </div>
+        );
     }
 
     if (loadError) {
         return (
-            <div style={styles.section}>
-                <p style={styles.errorText}>{loadError}</p>
-                <button style={styles.submitButton} onClick={loadAll}>Réessayer</button>
+            <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="text-sm text-red-500">{loadError}</p>
+                <button
+                    className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                    onClick={loadAll}
+                >
+                    Réessayer
+                </button>
             </div>
         );
     }
 
     return (
-        <div>
-            <div style={styles.section}>
-                <div style={styles.sectionHeader}>
-                    <div style={styles.tabsRow}>
+        <div className="space-y-6">
+            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-3">
+                    <div className="flex gap-1">
                         {TABS.map((tab) => (
                             <button
                                 key={tab.key}
-                                style={{
-                                    ...styles.tabButton,
-                                    ...(activeTab === tab.key ? styles.tabButtonActive : {}),
-                                }}
+                                className={
+                                    "border-b-2 px-4 py-2 text-sm font-medium transition-colors " +
+                                    (activeTab === tab.key
+                                        ? "border-blue-600 text-blue-600"
+                                        : "border-transparent text-slate-500 hover:text-slate-900")
+                                }
                                 onClick={() => setActiveTab(tab.key)}
                             >
                                 {tab.label}
@@ -458,7 +579,7 @@ export function RefadminView() {
                     </div>
                     {ADD_ACTION_LABELS[activeTab] && (
                         <button
-                            style={styles.addIconButton}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-lg font-medium text-white transition-colors hover:bg-blue-700"
                             onClick={handleAddButtonClick}
                             title={ADD_ACTION_LABELS[activeTab]}
                         >
@@ -468,6 +589,17 @@ export function RefadminView() {
                 </div>
 
                 {renderTable()}
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="mb-4 border-b border-slate-200 pb-3">
+                    <span className="text-lg font-semibold text-slate-900">Planning</span>
+                </div>
+                <PlanningView
+                    coursDonnes={coursDonnes}
+                    onSelectCoursDonne={openEditCoursDonneModal}
+                    onAdd={openAddCoursDonneModal}
+                />
             </div>
 
             <FiliereModal
@@ -507,6 +639,31 @@ export function RefadminView() {
                     setActiveTab("eleves");
                 }}
             />
+
+            <CoursDonneModal
+                isOpen={isCoursDonneModalOpen}
+                isEditing={editingCoursDonneId !== null}
+                promotions={promotions}
+                formateurs={formateurs}
+                cursusList={cursusList}
+                form={coursDonneForm}
+                onChange={setCoursDonneForm}
+                onSubmit={handleCoursDonneSubmit}
+                onClose={closeCoursDonneModal}
+                onDelete={handleCoursDonneDelete}
+                error={coursDonneError}
+            />
+
+            {toast && (
+                <div
+                    className={
+                        "fixed bottom-4 right-4 z-50 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg " +
+                        (toast.type === "error" ? "bg-red-500" : "bg-emerald-500")
+                    }
+                >
+                    {toast.message}
+                </div>
+            )}
         </div>
     );
 }
