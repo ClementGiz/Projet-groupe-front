@@ -1,29 +1,28 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { styles } from '../../views/RefAdmin/styles.js';
+
+function isEnCours(dateDebut, dateFin) {
+    if (!dateDebut || !dateFin) return false;
+    const today = new Date();
+    return today >= new Date(dateDebut) && today <= new Date(dateFin);
+}
 
 export function PromoModal({
                                isOpen,
                                isEditing,
-                               formations,
-                               cursusList,
+                               filieres,
                                form,
                                onChange,
                                onSubmit,
                                onClose,
+                               error,
+                               eleves,
+                               elevesLoading,
+                               onGoToEleves,
                            }) {
-    const [newEleve, setNewEleve] = useState("");
-
     if (!isOpen) return null;
 
-    const handleAddEleve = () => {
-        if (!newEleve.trim()) return;
-        onChange({ ...form, eleves: [...form.eleves, newEleve.trim()] });
-        setNewEleve("");
-    };
-
-    const handleRemoveEleve = (index) => {
-        onChange({ ...form, eleves: form.eleves.filter((_, i) => i !== index) });
-    };
+    const enCours = isEnCours(form.date_debut, form.date_fin);
 
     return (
         <div style={styles.overlay} onClick={onClose}>
@@ -32,7 +31,7 @@ export function PromoModal({
                     {isEditing ? "Modifier la promotion" : "Ajouter une promotion"}
                 </h3>
 
-                {formations.length === 0 ? (
+                {filieres.length === 0 ? (
                     <p style={styles.emptyText}>
                         Aucune filière existante. Crée d'abord une filière.
                     </p>
@@ -42,38 +41,16 @@ export function PromoModal({
                             <label style={styles.label}>Filière</label>
                             <select
                                 style={styles.select}
-                                value={form.formationId}
-                                onChange={(e) => onChange({ ...form, formationId: e.target.value })}
+                                value={form.filiere_id}
+                                onChange={(e) => onChange({ ...form, filiere_id: e.target.value })}
                             >
                                 <option value="">— Sélectionner —</option>
-                                {formations.map((f) => (
+                                {filieres.map((f) => (
                                     <option key={f.id} value={f.id}>
                                         {f.nom}
                                     </option>
                                 ))}
                             </select>
-                        </div>
-
-                        <div style={styles.field}>
-                            <label style={styles.label}>Cursus</label>
-                            {cursusList.length === 0 ? (
-                                <p style={styles.emptyText}>
-                                    Aucun cursus disponible. Crée d'abord un cursus.
-                                </p>
-                            ) : (
-                                <select
-                                    style={styles.select}
-                                    value={form.cursus}
-                                    onChange={(e) => onChange({ ...form, cursus: e.target.value })}
-                                >
-                                    <option value="">— Sélectionner —</option>
-                                    {cursusList.map((c) => (
-                                        <option key={c.id} value={c.nom}>
-                                            {c.nom}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
                         </div>
 
                         <div style={styles.field}>
@@ -83,60 +60,73 @@ export function PromoModal({
                                 type="text"
                                 value={form.nom}
                                 onChange={(e) => onChange({ ...form, nom: e.target.value })}
-                                placeholder="Ex: D2WM2027"
+                                placeholder="Ex: DEV - Promo 2027"
                             />
                         </div>
 
-                        <label style={styles.checkboxRow}>
-                            <input
-                                type="checkbox"
-                                checked={form.enCours}
-                                onChange={(e) => onChange({ ...form, enCours: e.target.checked })}
-                            />
-                            Promotion en cours
-                        </label>
-
-                        <div style={styles.field}>
-                            <label style={styles.label}>Élèves</label>
-
-                            {form.eleves.length === 0 ? (
-                                <p style={styles.emptyText}>Aucun élève pour le moment.</p>
-                            ) : (
-                                <ul style={styles.eleveList}>
-                                    {form.eleves.map((eleve, idx) => (
-                                        <li key={idx} style={styles.eleveItem}>
-                                            <span style={{ flex: 1 }}>{eleve}</span>
-                                            <button
-                                                type="button"
-                                                style={styles.removeEleveButton}
-                                                onClick={() => handleRemoveEleve(idx)}
-                                            >
-                                                Retirer
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-
-                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                        <div style={{ display: "flex", gap: 12 }}>
+                            <div style={{ ...styles.field, flex: 1 }}>
+                                <label style={styles.label}>Date de début</label>
                                 <input
-                                    style={{ ...styles.input, flex: 1 }}
-                                    type="text"
-                                    value={newEleve}
-                                    onChange={(e) => setNewEleve(e.target.value)}
-                                    placeholder="Nom de l'élève"
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            handleAddEleve();
-                                        }
-                                    }}
+                                    style={styles.input}
+                                    type="date"
+                                    value={form.date_debut}
+                                    onChange={(e) => onChange({ ...form, date_debut: e.target.value })}
                                 />
-                                <button type="button" style={styles.cancelButton} onClick={handleAddEleve}>
-                                    + Ajouter
-                                </button>
+                            </div>
+                            <div style={{ ...styles.field, flex: 1 }}>
+                                <label style={styles.label}>Date de fin</label>
+                                <input
+                                    style={styles.input}
+                                    type="date"
+                                    value={form.date_fin}
+                                    onChange={(e) => onChange({ ...form, date_fin: e.target.value })}
+                                />
                             </div>
                         </div>
+
+                        {form.date_debut && form.date_fin && (
+                            <span
+                                style={{
+                                    ...styles.statusPill,
+                                    ...(enCours ? styles.statusActive : styles.statusInactive),
+                                }}
+                            >
+                                {enCours ? "En cours" : "Terminée"}
+                            </span>
+                        )}
+
+                        {isEditing && (
+                            <div style={styles.field}>
+                                <label style={styles.label}>Élèves</label>
+
+                                {elevesLoading ? (
+                                    <p style={styles.emptyText}>Chargement...</p>
+                                ) : !eleves || eleves.length === 0 ? (
+                                    <p style={styles.emptyText}>Aucun élève dans cette promotion.</p>
+                                ) : (
+                                    <ul style={styles.eleveList}>
+                                        {eleves.map((e) => (
+                                            <li key={e.id} style={styles.eleveItem}>
+                                                <span style={{ flex: 1 }}>
+                                                    {e.first_name} {e.last_name}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+
+                                <button
+                                    type="button"
+                                    style={{ ...styles.cancelButton, marginTop: 8 }}
+                                    onClick={onGoToEleves}
+                                >
+                                    Gérer les élèves dans l'onglet Élèves
+                                </button>
+                            </div>
+                        )}
+
+                        {error && <p style={styles.errorText}>{error}</p>}
 
                         <div style={styles.modalActions}>
                             <button type="button" style={styles.cancelButton} onClick={onClose}>
