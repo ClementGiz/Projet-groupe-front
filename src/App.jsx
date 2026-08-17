@@ -1,38 +1,87 @@
-import { Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
+import './App.css'
+import {getCurrentUser, logout,} from "./services/authService";
+import {RefadminView} from "./components/views/RefAdmin/RefAdminView.jsx";
+import {useEffect, useState} from "react";
+import Login from "./pages/login.jsx";
 
-function App() {
-    return (
-        <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
 
-            <Header />
 
-            <main className="flex-1">
-                <Routes>
-                    <Route
-                        path="/"
-                        element={
-                            <div className="p-10">
-                                <h1 className="text-3xl font-bold text-[#172A3A]">
-                                 ACCUEIL
-                                </h1>
-                            </div>
-                        }
-                    />
+export const App = () => {
 
-                    <Route
-                        path="/login"
-                        element={<Login />}
-                    />
-                </Routes>
-            </main>
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-            <Footer />
+    useEffect(() => {
+        const checkAuthentication = async () => {
+            const currentUser = await getCurrentUser();
 
-        </div>
-    );
-}
+            setUser(currentUser);
+            setLoading(false);
+        };
 
-export default App;
+        checkAuthentication();
+    }, []);
+
+    const handleLogin = (user) => {
+        console.log("USER APP :", user);
+        setUser(user);
+    };
+
+    const handleLogout = () => {
+        logout();
+        setUser(null);
+    };
+
+    if (loading) {
+        return <p>Chargement...</p>;
+    }
+
+    if (!user) {
+        return (
+            <Login
+                onLogin={handleLogin}
+            />
+        );
+    }
+
+    switch (user.role) {
+
+      /*  case "ADMIN":
+            return (
+                <AdminView
+                    user={user}
+                    onLogout={handleLogout}
+                />
+            );*/
+
+        case "REF":
+            return (
+                <RefadminView
+                    user={user}
+                    onLogout={handleLogout}
+                />
+            );
+
+       /* case "FORMATEUR":
+           return (
+               <FormateurView
+                   user={user}
+                    onLogout={handleLogout}
+                />
+            );
+
+        case "ELEVE":
+            return (
+                <EleveView
+                    user={user}
+                    onLogout={handleLogout}
+                );
+*/
+        default:
+            handleLogout();
+            return null;
+    }
+};
+
+
+export default App
