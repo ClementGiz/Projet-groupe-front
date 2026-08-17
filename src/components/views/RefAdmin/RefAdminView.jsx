@@ -1,91 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { styles } from './styles';
 import { FiliereModal } from '../../modals/RefAdmin/FiliereModal';
 import { CursusModal } from '../../modals/RefAdmin/CursusModal';
 import { PromoModal } from '../../modals/RefAdmin/PromoModal';
+import {
+    getFilieres, createFiliere, updateFiliere,
+    getCursusList, createCursus, updateCursus,
+    getPromotions, createPromotion, updatePromotion,
+    getEleves, updateEleve,
+} from '../../../services/refadminService';
 
-// --- Données initiales ---
-
-const initialFilieres = [
-    { id: 1, nom: "D2WM" },
-    { id: 2, nom: "EADL" },
-    { id: 3, nom: "CDA" },
-    { id: 4, nom: "TSSR" },
-];
-
-const initialCursusList = [
-    { id: 1, nom: "Web Development" },
-    { id: 2, nom: "Full-Stack Development" },
-    { id: 3, nom: "DevOps" },
-    { id: 4, nom: "Infrastructure" },
-];
-
-const initialPromotions = [
-    {
-        id: 1,
-        formationId: 1,
-        cursus: "Web Development",
-        nom: "D2WM2026",
-        enCours: true,
-        eleves: ["Alice Dupont", "Karim Benali"],
-    },
-    {
-        id: 2,
-        formationId: 1,
-        cursus: "Web Development",
-        nom: "D2WM2025",
-        enCours: false,
-        eleves: ["Julie Martin"],
-    },
-    {
-        id: 3,
-        formationId: 2,
-        cursus: "Full-Stack Development",
-        nom: "CDA2026",
-        enCours: true,
-        eleves: [],
-    },
-    {
-        id: 4,
-        formationId: 2,
-        cursus: "Full-Stack Development",
-        nom: "CDA2025",
-        enCours: false,
-        eleves: ["Léo Fabre"],
-    },
-    {
-        id: 5,
-        formationId: 3,
-        cursus: "DevOps",
-        nom: "EADL2026",
-        enCours: true,
-        eleves: [],
-    },
-    {
-        id: 6,
-        formationId: 3,
-        cursus: "DevOps",
-        nom: "EADL2025",
-        enCours: false,
-        eleves: [],
-    },
-    {
-        id: 7,
-        formationId: 4,
-        cursus: "Infrastructure",
-        nom: "TSSR2026",
-        enCours: true,
-        eleves: [],
-    },
-    {
-        id: 8,
-        formationId: 4,
-        cursus: "Infrastructure",
-        nom: "TSSR2025",
-        enCours: false,
-        eleves: [],
-    },
-];
 
 const TABS = [
     { key: "filieres", label: "Filières" },
@@ -98,43 +22,86 @@ const ADD_ACTION_LABELS = {
     filieres: "Ajouter une filière",
     cursus: "Ajouter un cursus",
     promotions: "Ajouter une promotion",
-    eleves: "Ajouter un élève",
+    eleves: null, // pas de création d'élève depuis cette vue
 };
 
-const emptyFiliereForm = { nom: "" };
-const emptyPromoForm = { formationId: "", cursus: "", nom: "", enCours: false, eleves: [] };
+const emptyFiliereForm = { code: "", nom: "" };
+const emptyCursusForm = { filiere_id: "", code: "", libelle: "" };
+const emptyPromoForm = { filiere_id: "", nom: "", date_debut: "", date_fin: "" };
+
+function isEnCours(dateDebut, dateFin) {
+    if (!dateDebut || !dateFin) return false;
+    const today = new Date();
+    return today >= new Date(dateDebut) && today <= new Date(dateFin);
+}
 
 export function RefadminView() {
-    const [filieres, setFilieres] = useState(initialFilieres);
-    const [cursusList, setCursusList] = useState(initialCursusList);
-    const [promotions, setPromotions] = useState(initialPromotions);
+    const [filieres, setFilieres] = useState([]);
+    const [cursusList, setCursusList] = useState([]);
+    const [promotions, setPromotions] = useState([]);
+    const [eleves, setEleves] = useState([]);
+
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(null);
+
     const [activeTab, setActiveTab] = useState("filieres");
 
-    // --- Filière (ajout / édition) ---
+    // --- Filière ---
     const [isFiliereModalOpen, setIsFiliereModalOpen] = useState(false);
     const [editingFiliereId, setEditingFiliereId] = useState(null);
     const [filiereForm, setFiliereForm] = useState(emptyFiliereForm);
+    const [filiereError, setFiliereError] = useState(null);
 
-    // --- Cursus (ajout / édition) ---
+    // --- Cursus ---
     const [isCursusModalOpen, setIsCursusModalOpen] = useState(false);
     const [editingCursusId, setEditingCursusId] = useState(null);
-    const [cursusForm, setCursusForm] = useState({ nom: "" });
+    const [cursusForm, setCursusForm] = useState(emptyCursusForm);
+    const [cursusError, setCursusError] = useState(null);
 
-    // --- Promotion (ajout / édition, inclut la gestion des élèves) ---
+    // --- Promotion ---
     const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
-    const [editingPromoId, setEditingPromoId] = useState(null); // null si ajout
+    const [editingPromoId, setEditingPromoId] = useState(null);
     const [promoForm, setPromoForm] = useState(emptyPromoForm);
+    const [promoError, setPromoError] = useState(null);
+
+    // --- Chargement initial ---
+    const loadAll = async () => {
+        setLoading(true);
+        setLoadError(null);
+        try {
+            const [filieresRes, cursusRes, promotionsRes, elevesRes] = await Promise.all([
+                getFilieres(),
+                getCursusList(),
+                getPromotions(),
+                getEleves(),
+            ]);
+            setFilieres(filieresRes.data);
+            setCursusList(cursusRes.data);
+            setPromotions(promotionsRes.data);
+            setEleves(elevesRes.data);
+        } catch (err) {
+            setLoadError("Impossible de charger les données. Vérifie que l'API est bien démarrée.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadAll();
+    }, []);
 
     // --- Filière : handlers ---
     const openAddFiliereModal = () => {
         setEditingFiliereId(null);
         setFiliereForm(emptyFiliereForm);
+        setFiliereError(null);
         setIsFiliereModalOpen(true);
     };
 
     const openEditFiliereModal = (item) => {
         setEditingFiliereId(item.id);
-        setFiliereForm({ nom: item.nom });
+        setFiliereForm({ code: item.code, nom: item.nom });
+        setFiliereError(null);
         setIsFiliereModalOpen(true);
     };
 
@@ -142,93 +109,88 @@ export function RefadminView() {
         setIsFiliereModalOpen(false);
         setEditingFiliereId(null);
         setFiliereForm(emptyFiliereForm);
+        setFiliereError(null);
     };
 
-    const handleFiliereSubmit = (e) => {
+    const handleFiliereSubmit = async (e) => {
         e.preventDefault();
-        if (!filiereForm.nom.trim()) return;
+        if (!filiereForm.nom.trim() || !filiereForm.code.trim()) return;
 
-        if (editingFiliereId !== null) {
-            setFilieres(
-                filieres.map((item) =>
-                    item.id === editingFiliereId ? { ...item, nom: filiereForm.nom.trim() } : item
-                )
-            );
-        } else {
-            const newEntry = {
-                id: filieres.length ? Math.max(...filieres.map((f) => f.id)) + 1 : 1,
-                nom: filiereForm.nom.trim(),
-            };
-            setFilieres([...filieres, newEntry]);
+        setFiliereError(null);
+        try {
+            if (editingFiliereId !== null) {
+                await updateFiliere(editingFiliereId, filiereForm);
+            } else {
+                await createFiliere(filiereForm);
+            }
+            await loadAll();
+            closeFiliereModal();
+        } catch (err) {
+            setFiliereError("Erreur lors de l'enregistrement de la filière.");
         }
-
-        closeFiliereModal();
     };
 
     // --- Cursus : handlers ---
     const openAddCursusModal = () => {
         setEditingCursusId(null);
-        setCursusForm({ nom: "" });
+        setCursusForm({ ...emptyCursusForm, filiere_id: filieres[0] ? String(filieres[0].id) : "" });
+        setCursusError(null);
         setIsCursusModalOpen(true);
     };
 
     const openCursusEditModal = (cursusItem) => {
         setEditingCursusId(cursusItem.id);
-        setCursusForm({ nom: cursusItem.nom });
+        setCursusForm({
+            filiere_id: String(cursusItem.filiere?.id ?? ""),
+            code: cursusItem.code,
+            libelle: cursusItem.libelle,
+        });
+        setCursusError(null);
         setIsCursusModalOpen(true);
     };
 
     const closeCursusModal = () => {
         setIsCursusModalOpen(false);
         setEditingCursusId(null);
-        setCursusForm({ nom: "" });
+        setCursusForm(emptyCursusForm);
+        setCursusError(null);
     };
 
-    const handleCursusSubmit = (e) => {
+    const handleCursusSubmit = async (e) => {
         e.preventDefault();
-        if (!cursusForm.nom.trim()) return;
+        if (!cursusForm.libelle.trim() || !cursusForm.code.trim() || !cursusForm.filiere_id) return;
 
-        if (editingCursusId !== null) {
-            setCursusList(
-                cursusList.map((c) =>
-                    c.id === editingCursusId ? { ...c, nom: cursusForm.nom.trim() } : c
-                )
-            );
-        } else {
-            const newCursus = {
-                id: cursusList.length ? Math.max(...cursusList.map((c) => c.id)) + 1 : 1,
-                nom: cursusForm.nom.trim(),
-            };
-            setCursusList([...cursusList, newCursus]);
+        setCursusError(null);
+        try {
+            if (editingCursusId !== null) {
+                await updateCursus(editingCursusId, cursusForm);
+            } else {
+                await createCursus(cursusForm);
+            }
+            await loadAll();
+            closeCursusModal();
+        } catch (err) {
+            setCursusError("Erreur lors de l'enregistrement du cursus.");
         }
-
-        closeCursusModal();
     };
 
     // --- Promotion : handlers ---
     const openAddPromoModal = () => {
         setEditingPromoId(null);
-        setPromoForm({
-            formationId: filieres[0] ? String(filieres[0].id) : "",
-            cursus: "",
-            nom: "",
-            enCours: false,
-            eleves: [],
-        });
+        setPromoForm({ ...emptyPromoForm, filiere_id: filieres[0] ? String(filieres[0].id) : "" });
+        setPromoError(null);
         setIsPromoModalOpen(true);
     };
 
-    const openPromoEditModal = (promoId) => {
-        const promo = promotions.find((p) => p.id === promoId);
-        if (!promo) return;
-        setEditingPromoId(promoId);
+    const openPromoEditModal = (promo) => {
+        setEditingPromoId(promo.id);
         setPromoForm({
-            formationId: String(promo.formationId),
-            cursus: promo.cursus,
+            filiere_id: String(promo.filiere?.id ?? ""),
             nom: promo.nom,
-            enCours: promo.enCours,
-            eleves: [...promo.eleves],
+            date_debut: promo.date_debut,
+            date_fin: promo.date_fin,
         });
+        setPromoError(null);
         setIsPromoModalOpen(true);
     };
 
@@ -236,46 +198,36 @@ export function RefadminView() {
         setIsPromoModalOpen(false);
         setEditingPromoId(null);
         setPromoForm(emptyPromoForm);
+        setPromoError(null);
     };
 
-    const handlePromoSubmit = (e) => {
+    const handlePromoSubmit = async (e) => {
         e.preventDefault();
-        if (!promoForm.nom.trim() || !promoForm.formationId) return;
+        if (!promoForm.nom.trim() || !promoForm.filiere_id || !promoForm.date_debut || !promoForm.date_fin) return;
 
-        if (editingPromoId !== null) {
-            setPromotions(
-                promotions.map((p) =>
-                    p.id === editingPromoId
-                        ? {
-                            ...p,
-                            formationId: Number(promoForm.formationId),
-                            cursus: promoForm.cursus,
-                            nom: promoForm.nom.trim(),
-                            enCours: promoForm.enCours,
-                            eleves: promoForm.eleves,
-                        }
-                        : p
-                )
-            );
-        } else {
-            const newPromo = {
-                id: promotions.length ? Math.max(...promotions.map((p) => p.id)) + 1 : 1,
-                formationId: Number(promoForm.formationId),
-                cursus: promoForm.cursus,
-                nom: promoForm.nom.trim(),
-                enCours: promoForm.enCours,
-                eleves: promoForm.eleves,
-            };
-            setPromotions([...promotions, newPromo]);
+        setPromoError(null);
+        try {
+            if (editingPromoId !== null) {
+                await updatePromotion(editingPromoId, promoForm);
+            } else {
+                await createPromotion(promoForm);
+            }
+            await loadAll();
+            closePromoModal();
+        } catch (err) {
+            setPromoError("Erreur lors de l'enregistrement de la promotion.");
         }
-
-        closePromoModal();
     };
 
-    const toggleEnCours = (promoId) => {
-        setPromotions(
-            promotions.map((p) => (p.id === promoId ? { ...p, enCours: !p.enCours } : p))
-        );
+    // --- Élèves : réassignation de promotion ---
+    const handleReassignEleve = async (eleveId, promotionId) => {
+        if (!promotionId) return;
+        try {
+            await updateEleve(eleveId, { promotion_id: promotionId });
+            await loadAll();
+        } catch (err) {
+            // silencieux ici, on pourrait ajouter un message d'erreur global si besoin
+        }
     };
 
     // --- Bouton "+" contextuel ---
@@ -285,34 +237,20 @@ export function RefadminView() {
                 openAddCursusModal();
                 break;
             case "promotions":
-            case "eleves":
                 openAddPromoModal();
                 break;
             case "filieres":
-            default:
                 openAddFiliereModal();
+                break;
+            default:
                 break;
         }
     };
 
-    // --- Données dérivées ---
-    const filiereNom = (formationId) =>
-        filieres.find((f) => f.id === formationId)?.nom ?? "—";
-
-    const allPromotions = promotions.map((p) => ({
-        ...p,
-        filiere: filiereNom(p.formationId),
-    }));
-
-    const allEleves = promotions.flatMap((p) =>
-        p.eleves.map((eleve, eleveIndex) => ({
-            promoId: p.id,
-            eleveIndex,
-            nom: eleve,
-            promotion: p.nom,
-            filiere: filiereNom(p.formationId),
-        }))
-    );
+    // --- Données pour le modal Promo (élèves déjà chargés) ---
+    const editingPromoEleves = editingPromoId !== null
+        ? eleves.filter((e) => e.eleve_profile?.promotion?.id === editingPromoId)
+        : [];
 
     // --- Rendu du tableau selon l'onglet actif ---
     const renderTable = () => {
@@ -322,31 +260,31 @@ export function RefadminView() {
                     <table style={styles.table}>
                         <thead>
                         <tr>
-                            <th style={styles.th}>ID</th>
+                            <th style={styles.th}>Code</th>
                             <th style={styles.th}>Nom</th>
                             <th style={styles.th}>Nb promotions</th>
                             <th style={styles.th}></th>
                         </tr>
                         </thead>
                         <tbody>
-                        {filieres.map((f) => (
-                            <tr key={f.id}>
-                                <td style={styles.td}>{f.id}</td>
-                                <td style={styles.td}>{f.nom}</td>
-                                <td style={styles.td}>
-                                    {promotions.filter((p) => p.formationId === f.id).length}
-                                </td>
-                                <td style={styles.actionTd}>
-                                    <button
-                                        style={styles.editButton}
-                                        onClick={() => openEditFiliereModal(f)}
-                                        title="Modifier"
-                                    >
-                                        ✏️
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                        {filieres.length === 0 ? (
+                            <tr><td style={styles.td} colSpan={4}>Aucune filière enregistrée.</td></tr>
+                        ) : (
+                            filieres.map((f) => (
+                                <tr key={f.id}>
+                                    <td style={styles.td}>{f.code}</td>
+                                    <td style={styles.td}>{f.nom}</td>
+                                    <td style={styles.td}>
+                                        {promotions.filter((p) => p.filiere?.id === f.id).length}
+                                    </td>
+                                    <td style={styles.actionTd}>
+                                        <button style={styles.editButton} onClick={() => openEditFiliereModal(f)} title="Modifier">
+                                            ✏️
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                         </tbody>
                     </table>
                 );
@@ -356,29 +294,23 @@ export function RefadminView() {
                     <table style={styles.table}>
                         <thead>
                         <tr>
-                            <th style={styles.th}>ID</th>
-                            <th style={styles.th}>Nom</th>
+                            <th style={styles.th}>Code</th>
+                            <th style={styles.th}>Libellé</th>
+                            <th style={styles.th}>Filière</th>
                             <th style={styles.th}></th>
                         </tr>
                         </thead>
                         <tbody>
                         {cursusList.length === 0 ? (
-                            <tr>
-                                <td style={styles.td} colSpan={3}>
-                                    Aucun cursus enregistré.
-                                </td>
-                            </tr>
+                            <tr><td style={styles.td} colSpan={4}>Aucun cursus enregistré.</td></tr>
                         ) : (
                             cursusList.map((c) => (
                                 <tr key={c.id}>
-                                    <td style={styles.td}>{c.id}</td>
-                                    <td style={styles.td}>{c.nom}</td>
+                                    <td style={styles.td}>{c.code}</td>
+                                    <td style={styles.td}>{c.libelle}</td>
+                                    <td style={styles.td}>{c.filiere?.nom}</td>
                                     <td style={styles.actionTd}>
-                                        <button
-                                            style={styles.editButton}
-                                            onClick={() => openCursusEditModal(c)}
-                                            title="Modifier"
-                                        >
+                                        <button style={styles.editButton} onClick={() => openCursusEditModal(c)} title="Modifier">
                                             ✏️
                                         </button>
                                     </td>
@@ -396,58 +328,52 @@ export function RefadminView() {
                         <tr>
                             <th style={styles.th}>Promotion</th>
                             <th style={styles.th}>Filière</th>
-                            <th style={styles.th}>Cursus</th>
+                            <th style={styles.th}>Dates</th>
                             <th style={styles.th}>Statut</th>
                             <th style={styles.th}>Élèves</th>
                             <th style={styles.th}></th>
                         </tr>
                         </thead>
                         <tbody>
-                        {allPromotions.length === 0 ? (
-                            <tr>
-                                <td style={styles.td} colSpan={6}>
-                                    Aucune promotion enregistrée.
-                                </td>
-                            </tr>
+                        {promotions.length === 0 ? (
+                            <tr><td style={styles.td} colSpan={6}>Aucune promotion enregistrée.</td></tr>
                         ) : (
-                            allPromotions.map((p) => (
-                                <tr key={p.id}>
-                                    <td style={styles.td}>{p.nom}</td>
-                                    <td style={styles.td}>{p.filiere}</td>
-                                    <td style={styles.td}>{p.cursus}</td>
-                                    <td style={styles.td}>
-                                        <button
-                                            style={{
-                                                ...styles.statusPill,
-                                                ...(p.enCours ? styles.statusActive : styles.statusInactive),
-                                            }}
-                                            onClick={() => toggleEnCours(p.id)}
-                                            title="Cliquer pour changer le statut"
-                                        >
-                                            {p.enCours ? "En cours" : "Terminée"}
-                                        </button>
-                                    </td>
-                                    <td style={styles.td}>
-                      <span
-                          style={styles.badge}
-                          onClick={() => openPromoEditModal(p.id)}
-                          title="Voir / gérer les élèves"
-                      >
-                        Voir
-                        <span style={styles.badgeCount}>{p.eleves.length}</span>
-                      </span>
-                                    </td>
-                                    <td style={styles.actionTd}>
-                                        <button
-                                            style={styles.editButton}
-                                            onClick={() => openPromoEditModal(p.id)}
-                                            title="Modifier"
-                                        >
-                                            ✏️
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
+                            promotions.map((p) => {
+                                const enCours = isEnCours(p.date_debut, p.date_fin);
+                                const nbEleves = eleves.filter((e) => e.eleve_profile?.promotion?.id === p.id).length;
+                                return (
+                                    <tr key={p.id}>
+                                        <td style={styles.td}>{p.nom}</td>
+                                        <td style={styles.td}>{p.filiere?.nom}</td>
+                                        <td style={styles.td}>{p.date_debut} → {p.date_fin}</td>
+                                        <td style={styles.td}>
+                                            <span
+                                                style={{
+                                                    ...styles.statusPill,
+                                                    ...(enCours ? styles.statusActive : styles.statusInactive),
+                                                }}
+                                            >
+                                                {enCours ? "En cours" : "Terminée"}
+                                            </span>
+                                        </td>
+                                        <td style={styles.td}>
+                                            <span
+                                                style={styles.badge}
+                                                onClick={() => openPromoEditModal(p)}
+                                                title="Voir / gérer les élèves"
+                                            >
+                                                Voir
+                                                <span style={styles.badgeCount}>{nbEleves}</span>
+                                            </span>
+                                        </td>
+                                        <td style={styles.actionTd}>
+                                            <button style={styles.editButton} onClick={() => openPromoEditModal(p)} title="Modifier">
+                                                ✏️
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                         </tbody>
                     </table>
@@ -459,32 +385,33 @@ export function RefadminView() {
                         <thead>
                         <tr>
                             <th style={styles.th}>Nom</th>
-                            <th style={styles.th}>Promotion</th>
-                            <th style={styles.th}>Filière</th>
-                            <th style={styles.th}></th>
+                            <th style={styles.th}>Email</th>
+                            <th style={styles.th}>Promotion actuelle</th>
+                            <th style={styles.th}>Réassigner</th>
                         </tr>
                         </thead>
                         <tbody>
-                        {allEleves.length === 0 ? (
-                            <tr>
-                                <td style={styles.td} colSpan={4}>
-                                    Aucun élève enregistré.
-                                </td>
-                            </tr>
+                        {eleves.length === 0 ? (
+                            <tr><td style={styles.td} colSpan={4}>Aucun élève enregistré.</td></tr>
                         ) : (
-                            allEleves.map((e) => (
-                                <tr key={`${e.promoId}-${e.eleveIndex}`}>
-                                    <td style={styles.td}>{e.nom}</td>
-                                    <td style={styles.td}>{e.promotion}</td>
-                                    <td style={styles.td}>{e.filiere}</td>
-                                    <td style={styles.actionTd}>
-                                        <button
-                                            style={styles.editButton}
-                                            onClick={() => openPromoEditModal(e.promoId)}
-                                            title="Modifier (via la promotion)"
+                            eleves.map((e) => (
+                                <tr key={e.id}>
+                                    <td style={styles.td}>{e.first_name} {e.last_name}</td>
+                                    <td style={styles.td}>{e.email}</td>
+                                    <td style={styles.td}>{e.eleve_profile?.promotion?.nom ?? "—"}</td>
+                                    <td style={styles.td}>
+                                        <select
+                                            style={styles.select}
+                                            value={e.eleve_profile?.promotion?.id ?? ""}
+                                            onChange={(ev) => handleReassignEleve(e.id, ev.target.value)}
                                         >
-                                            ✏️
-                                        </button>
+                                            <option value="" disabled>— Changer de promotion —</option>
+                                            {promotions.map((p) => (
+                                                <option key={p.id} value={p.id}>
+                                                    {p.nom}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </td>
                                 </tr>
                             ))
@@ -497,6 +424,19 @@ export function RefadminView() {
                 return null;
         }
     };
+
+    if (loading) {
+        return <div style={styles.section}>Chargement...</div>;
+    }
+
+    if (loadError) {
+        return (
+            <div style={styles.section}>
+                <p style={styles.errorText}>{loadError}</p>
+                <button style={styles.submitButton} onClick={loadAll}>Réessayer</button>
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -516,13 +456,15 @@ export function RefadminView() {
                             </button>
                         ))}
                     </div>
-                    <button
-                        style={styles.addIconButton}
-                        onClick={handleAddButtonClick}
-                        title={ADD_ACTION_LABELS[activeTab]}
-                    >
-                        +
-                    </button>
+                    {ADD_ACTION_LABELS[activeTab] && (
+                        <button
+                            style={styles.addIconButton}
+                            onClick={handleAddButtonClick}
+                            title={ADD_ACTION_LABELS[activeTab]}
+                        >
+                            +
+                        </button>
+                    )}
                 </div>
 
                 {renderTable()}
@@ -535,26 +477,35 @@ export function RefadminView() {
                 onChange={setFiliereForm}
                 onSubmit={handleFiliereSubmit}
                 onClose={closeFiliereModal}
+                error={filiereError}
             />
 
             <CursusModal
                 isOpen={isCursusModalOpen}
                 isEditing={editingCursusId !== null}
+                filieres={filieres}
                 form={cursusForm}
                 onChange={setCursusForm}
                 onSubmit={handleCursusSubmit}
                 onClose={closeCursusModal}
+                error={cursusError}
             />
 
             <PromoModal
                 isOpen={isPromoModalOpen}
                 isEditing={editingPromoId !== null}
-                formations={filieres}
-                cursusList={cursusList}
+                filieres={filieres}
                 form={promoForm}
                 onChange={setPromoForm}
                 onSubmit={handlePromoSubmit}
                 onClose={closePromoModal}
+                error={promoError}
+                eleves={editingPromoEleves}
+                elevesLoading={false}
+                onGoToEleves={() => {
+                    closePromoModal();
+                    setActiveTab("eleves");
+                }}
             />
         </div>
     );

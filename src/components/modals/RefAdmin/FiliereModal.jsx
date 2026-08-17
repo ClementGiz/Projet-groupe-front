@@ -1,7 +1,7 @@
 import React from 'react';
 import { styles } from '../../views/RefAdmin/styles.js';
 
-export function FiliereModal({ isOpen, isEditing, form, onChange, onSubmit, onClose }) {
+export function FiliereModal({ isOpen, isEditing, form, onChange, onSubmit, onClose, error }) {
     if (!isOpen) return null;
 
     return (
@@ -12,16 +12,29 @@ export function FiliereModal({ isOpen, isEditing, form, onChange, onSubmit, onCl
                 </h3>
                 <form onSubmit={onSubmit}>
                     <div style={styles.field}>
+                        <label style={styles.label}>Code</label>
+                        <input
+                            style={styles.input}
+                            type="text"
+                            value={form.code}
+                            onChange={(e) => onChange({ ...form, code: e.target.value })}
+                            placeholder="Ex: DEV"
+                            autoFocus
+                        />
+                    </div>
+
+                    <div style={styles.field}>
                         <label style={styles.label}>Nom</label>
                         <input
                             style={styles.input}
                             type="text"
                             value={form.nom}
                             onChange={(e) => onChange({ ...form, nom: e.target.value })}
-                            placeholder="Ex: D2WM"
-                            autoFocus
+                            placeholder="Ex: Développement"
                         />
                     </div>
+
+                    {error && <p style={styles.errorText}>{error}</p>}
 
                     <div style={styles.modalActions}>
                         <button type="button" style={styles.cancelButton} onClick={onClose}>
