@@ -2,11 +2,11 @@ import './App.css'
 import {getCurrentUser, logout,} from "./services/authService";
 import {RefadminView} from "./components/views/RefAdmin/RefAdminView.jsx";
 import {useEffect, useState} from "react";
-import {Login} from "./components/views/Authenfication/Authentification.jsx";
+import {Login} from "./components/views/Authenfication/Login.jsx";
 import {AdminView} from "./components/Views/Administrateur/AdminView.jsx";
-
-
-
+import {FormateurView} from "./components/Views/Formateur/FormateurView.jsx";
+import Header from "./components/layouts/header.jsx";
+import Footer from "./components/layouts/Footer.jsx";
 
 export const App = () => {
 
@@ -46,44 +46,37 @@ export const App = () => {
         );
     }
 
-    switch (user.role) {
+    const renderActiveView = () => {
+        switch (user.role) {
+            case "ADMIN":
+                return <AdminView user={user} onLogout={handleLogout} />;
+            case "REF":
+                return <RefadminView user={user} onLogout={handleLogout} />;
+            case "FORMATEUR":
+                return <FormateurView user={user} onLogout={handleLogout} />;
+            /*case "ELEVE":
+                return <EleveView user={user} onLogout={handleLogout}/>;*/
+            default:
+                return (
+                    <div className="flex flex-col items-center justify-center p-12 text-center">
+                        <p className="text-[#EF4444] font-medium mb-4">Rôle non reconnu ou accès non autorisé.</p>
+                        <button onClick={handleLogout} className="bg-[#2563EB] text-white px-4 py-2 rounded-lg cursor-pointer">
+                            Se déconnecter
+                        </button>
+                    </div>
+                );
+        }
+    };
 
-        case "ADMIN":
-            return (
-                <AdminView
-                    user={user}
-                    onLogout={handleLogout}
-                />
-            );
-
-        /*case "REF":
-            return (
-                <RefadminView
-                    user={user}
-                    onLogout={handleLogout}
-                />
-            );
-
-       /* case "FORMATEUR":
-           return (
-               <FormateurView
-                   user={user}
-                    onLogout={handleLogout}
-                />
-            );*/
-
-        /*case "ELEVE":
-            return (
-                /*<EleveView
-                    user={user}
-                    onLogout={handleLogout}/>
-                <Calendar />
-                );*/
-
-        default:
-            handleLogout();
-            return null;
-    }
+    return (
+        <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+            <Header user={user} onLogout={handleLogout} />
+            <main className="flex-grow">
+                {renderActiveView()}
+            </main>
+            <Footer />
+        </div>
+    );
 };
 
 

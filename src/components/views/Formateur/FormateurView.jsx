@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {getMyCourses} from "../../../services/formateurService.js";
 import {PromotionElevesModal} from "../../modals/Formateur/PromotionElevesModal.jsx";
 
-export function FormateurCoursesView() {
+export function FormateurView() {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(null);
@@ -46,7 +46,7 @@ export function FormateurCoursesView() {
             case 'en_cours':
                 return (
                     <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[12px] font-medium text-[#F59E0B] border border-amber-200">
-                        ● En cours
+                        En cours
                     </span>
                 );
             case 'a_venir':
@@ -203,9 +203,9 @@ export function FormateurCoursesView() {
             )}
 
             <PromotionElevesModal
-                isOpen={Boolean(selectedCourseForModal)}
-                course={selectedCourseForModal}
-                onClose={() => setSelectedCourseForModal(null)}
+            isOpen={Boolean(selectedCourseForModal)}
+            course={selectedCourseForModal}
+            onClose={() => setSelectedCourseForModal(null)}
             />
         </div>
     );

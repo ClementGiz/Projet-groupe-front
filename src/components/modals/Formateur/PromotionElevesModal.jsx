@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { getElevesByPromotion } from '../../../services/formateurService.js';
-import { PromotionElevesModal } from '../../modals/Formateur/PromotionElevesModal';
 
 export function PromotionElevesModal({ isOpen, course, onClose }) {
     const [eleves, setEleves] = useState([]);
@@ -16,8 +15,8 @@ export function PromotionElevesModal({ isOpen, course, onClose }) {
             setError(null);
 
             try {
-                const res = getElevesByPromotion(course.promotion_id);
-                setEleves(Array.isArray(res.data) ? res.data : (res.data?.users || []));
+                const res = await getElevesByPromotion(course.promotion_id);
+                setEleves(res.data || []);
             } catch (err) {
                 console.error("Erreur chargement élèves :", err);
                 setError("Impossible de charger la liste des élèves.");
