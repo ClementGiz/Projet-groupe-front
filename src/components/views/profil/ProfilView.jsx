@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// import { getMyProfile, updateMyProfile } from '../services/profileService'; // Ajuste le chemin selon ton projet
+import { getMyProfile, updateMyProfile } from '../../../services/profilService.js';
 
 export default function ProfilView() {
     // --- ÉTATS LOCAUX ---
