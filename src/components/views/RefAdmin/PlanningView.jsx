@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 
 const JOURS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
-// Rotation de couleurs (issues de la charte) pour distinguer visuellement les cursus
 const CURSUS_COLORS = [
     "bg-blue-600",
     "bg-emerald-500",
@@ -23,7 +22,6 @@ function toDateOnly(d) {
 
 function buildMonthGrid(year, month) {
     const firstOfMonth = new Date(year, month, 1);
-    // 0 = dimanche dans JS, on veut une grille commençant le lundi
     const firstWeekday = (firstOfMonth.getDay() + 6) % 7;
     const gridStart = new Date(year, month, 1 - firstWeekday);
 
