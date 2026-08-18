@@ -1,7 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getMyPlanning } from '../../services/planningService';
 
-export default function Calendar({ events = [], onEventClick }) {
+export default function Calendar({ events: externalEvents, onEventClick }) {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [internalEvents, setInternalEvents] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    // Chargement automatique depuis l'API Django si aucun tableau d'événements n'est transmis
+    useEffect(() => {
+        if (externalEvents && externalEvents.length > 0) {
+            setInternalEvents(externalEvents);
+            return;
+        }
+
+        const fetchPlanning = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const responseData = await getMyPlanning();
+
+                // Extraction de la liste (s'adapte si le backend renvoie un tableau direct ou un objet)
+                const rawList = Array.isArray(responseData)
+                    ? responseData
+                    : (responseData.cours_donnes || responseData.results || []);
+
+                // Mapping selon les relations BDD Django (CoursDonne -> CursusCours -> Cours)
+                const formattedEvents = rawList.map((item) => ({
+                    id: item.id,
+                    title: item.cours?.cours?.libelle || item.title || 'Cours sans titre',
+                    promotion: item.promotion?.nom || item.promotion_nom || '',
+                    date: item.date_debut || item.date, // Format YYYY-MM-DD
+                    date_fin: item.date_fin || null,
+                    time: item.horaire || (item.date_fin ? `Jusqu'au ${item.date_fin}` : ''),
+                    type: item.type || 'cours'
+                }));
+
+                setInternalEvents(formattedEvents);
+            } catch (err) {
+                console.error("Erreur lors de la récupération du planning :", err);
+                setError("Impossible de charger le planning.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPlanning();
+    }, [externalEvents]);
+
+    // Source unique d'événements
+    const activeEvents = (externalEvents && externalEvents.length > 0) ? externalEvents : internalEvents;
 
     // Noms des mois et jours en français
     const monthNames = [
@@ -24,23 +72,17 @@ export default function Calendar({ events = [], onEventClick }) {
     const month = currentDate.getMonth();
 
     const firstDayOfMonth = new Date(year, month, 1).getDay();
-    // Ajustement pour faire commencer la semaine le Lundi (0: Lun, 6: Dim)
     const startingDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
-
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    // Génération du quadrillage des jours
     const calendarDays = [];
-    // Case vides du début de mois
     for (let i = 0; i < startingDay; i++) {
         calendarDays.push(null);
     }
-    // Jours du mois courant
     for (let day = 1; day <= daysInMonth; day++) {
         calendarDays.push(day);
     }
 
-    // Helper pour formater les dates en YYYY-MM-DD
     const formatDateKey = (day) => {
         if (!day) return null;
         const m = String(month + 1).padStart(2, '0');
@@ -48,14 +90,14 @@ export default function Calendar({ events = [], onEventClick }) {
         return `${year}-${m}-${d}`;
     };
 
-    // Filtrer les événements par jour
+    // Filtrage des événements par jour
     const getEventsForDay = (day) => {
         const dateKey = formatDateKey(day);
         if (!dateKey) return [];
-        return events.filter((event) => event.date === dateKey);
+        return activeEvents.filter((event) => event.date === dateKey);
     };
 
-    // Badge de statut / type d'événement (Charte : Vert #10B981, Ambre #F59E0B, Bleu #2563EB)[cite: 1]
+    // Palette visuelle conforme à la charte graphique[cite: 1]
     const getEventBadgeStyle = (type) => {
         switch (type) {
             case 'cours':
@@ -72,14 +114,17 @@ export default function Calendar({ events = [], onEventClick }) {
     const todayStr = new Date().toISOString().split('T')[0];
 
     return (
-        // Conteneur principal (Fond blanc, bordure 1px, ombrage léger, arrondis 8px)[cite: 1]
-        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-5 w-full max-w-4xl mx-auto space-y-4">
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-5 w-full max-w-4xl mx-auto space-y-4 font-sans">
 
             {/* En-tête : Titre & Navigation */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                <h2 className="text-lg font-semibold text-slate-900">
-                    {monthNames[month]} {year}
-                </h2>
+                <div className="flex items-center space-x-3">
+                    <h2 className="text-lg font-semibold text-slate-900">
+                        {monthNames[month]} {year}
+                    </h2>
+                    {loading && <span className="text-xs font-medium text-blue-600 animate-pulse">Chargement BDD...</span>}
+                    {error && <span className="text-xs font-medium text-red-500">{error}</span>}
+                </div>
 
                 <div className="flex items-center space-x-2">
                     <button
@@ -105,12 +150,12 @@ export default function Calendar({ events = [], onEventClick }) {
                 </div>
             </div>
 
-            {/* Jours de la semaine (Haut de tableau) */}
+            {/* Jours de la semaine */}
             <div className="grid grid-cols-7 gap-1 text-center border-b border-slate-100 pb-2">
                 {dayNames.map((day, idx) => (
                     <span key={idx} className="text-xs font-medium text-slate-500 uppercase">
-            {day}
-          </span>
+                        {day}
+                    </span>
                 ))}
             </div>
 
@@ -136,18 +181,18 @@ export default function Calendar({ events = [], onEventClick }) {
                         >
                             {/* Numéro du jour */}
                             <div className="flex justify-between items-center">
-                <span
-                    className={`text-xs font-semibold px-1.5 py-0.5 rounded-md ${
-                        isToday
-                            ? 'bg-blue-600 text-white'
-                            : 'text-slate-700'
-                    }`}
-                >
-                  {day}
-                </span>
+                                <span
+                                    className={`text-xs font-semibold px-1.5 py-0.5 rounded-md ${
+                                        isToday
+                                            ? 'bg-blue-600 text-white'
+                                            : 'text-slate-700'
+                                    }`}
+                                >
+                                    {day}
+                                </span>
                             </div>
 
-                            {/* Liste des événements du jour */}
+                            {/* Événements du jour */}
                             <div className="space-y-1 overflow-y-auto max-h-20 scrollbar-thin">
                                 {dayEvents.map((evt, evtIdx) => (
                                     <button
@@ -156,10 +201,14 @@ export default function Calendar({ events = [], onEventClick }) {
                                         className={`w-full text-left text-[11px] px-1.5 py-1 rounded border truncate block transition cursor-pointer ${getEventBadgeStyle(
                                             evt.type
                                         )}`}
-                                        title={`${evt.title} (${evt.time || ''})`}
+                                        title={`${evt.title} ${evt.promotion ? `(${evt.promotion})` : ''}`}
                                     >
                                         <span className="font-semibold block truncate">{evt.title}</span>
-                                        {evt.time && <span className="opacity-75 text-[10px]">{evt.time}</span>}
+                                        {evt.promotion && (
+                                            <span className="opacity-80 text-[10px] block truncate font-normal">
+                                                {evt.promotion}
+                                            </span>
+                                        )}
                                     </button>
                                 ))}
                             </div>
