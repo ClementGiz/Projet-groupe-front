@@ -24,7 +24,7 @@ const ADD_ACTION_LABELS = {
     filieres: "Ajouter une filière",
     cursus: "Ajouter un cursus",
     promotions: "Ajouter une promotion",
-    eleves: null, // pas de création d'élève depuis cette vue
+    eleves: null,
 };
 
 const emptyFiliereForm = { code: "", nom: "" };
@@ -363,13 +363,13 @@ export function RefadminView() {
         switch (activeTab) {
             case "filieres":
                 return (
-                    <table className="w-full border-collapse">
-                        <thead>
+                    <table className="w-full table-fixed border-collapse">
+                        <thead className="sticky top-0 bg-white">
                         <tr className="border-b border-slate-200">
-                            <th className={thClass}>Code</th>
+                            <th className={thClass + " w-28"}>Code</th>
                             <th className={thClass}>Nom</th>
-                            <th className={thClass + " text-right"}>Nb promotions</th>
-                            <th className={thClass}></th>
+                            <th className={thClass + " w-36 text-right"}>Nb promotions</th>
+                            <th className={thClass + " w-14"}></th>
                         </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -378,8 +378,8 @@ export function RefadminView() {
                         ) : (
                             filieres.map((f) => (
                                 <tr key={f.id} className="transition-colors hover:bg-slate-50">
-                                    <td className={tdClass}>{f.code}</td>
-                                    <td className={tdClass}>{f.nom}</td>
+                                    <td className={tdClass + " truncate"}>{f.code}</td>
+                                    <td className={tdClass + " truncate"}>{f.nom}</td>
                                     <td className={tdClass + " text-right"}>
                                         {promotions.filter((p) => p.filiere?.id === f.id).length}
                                     </td>
@@ -397,13 +397,13 @@ export function RefadminView() {
 
             case "cursus":
                 return (
-                    <table className="w-full border-collapse">
-                        <thead>
+                    <table className="w-full table-fixed border-collapse">
+                        <thead className="sticky top-0 bg-white">
                         <tr className="border-b border-slate-200">
-                            <th className={thClass}>Code</th>
-                            <th className={thClass}>Libellé</th>
+                            <th className={thClass + " w-28"}>Code</th>
+                            <th className={thClass + " w-1/3"}>Libellé</th>
                             <th className={thClass}>Filière</th>
-                            <th className={thClass}></th>
+                            <th className={thClass + " w-14"}></th>
                         </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -412,9 +412,9 @@ export function RefadminView() {
                         ) : (
                             cursusList.map((c) => (
                                 <tr key={c.id} className="transition-colors hover:bg-slate-50">
-                                    <td className={tdClass}>{c.code}</td>
-                                    <td className={tdClass}>{c.libelle}</td>
-                                    <td className={tdClass}>{c.filiere?.nom}</td>
+                                    <td className={tdClass + " truncate"}>{c.code}</td>
+                                    <td className={tdClass + " truncate"}>{c.libelle}</td>
+                                    <td className={tdClass + " truncate"}>{c.filiere?.nom}</td>
                                     <td className={tdClass + " text-right"}>
                                         <button className={editButtonClass} onClick={() => openCursusEditModal(c)} title="Modifier">
                                             ✏️
@@ -429,15 +429,15 @@ export function RefadminView() {
 
             case "promotions":
                 return (
-                    <table className="w-full border-collapse">
-                        <thead>
+                    <table className="w-full table-fixed border-collapse">
+                        <thead className="sticky top-0 bg-white">
                         <tr className="border-b border-slate-200">
-                            <th className={thClass}>Promotion</th>
-                            <th className={thClass}>Filière</th>
-                            <th className={thClass}>Dates</th>
-                            <th className={thClass}>Statut</th>
-                            <th className={thClass}>Élèves</th>
-                            <th className={thClass}></th>
+                            <th className={thClass + " w-1/4"}>Promotion</th>
+                            <th className={thClass + " w-32"}>Filière</th>
+                            <th className={thClass + " w-48"}>Dates</th>
+                            <th className={thClass + " w-28"}>Statut</th>
+                            <th className={thClass + " w-24"}>Élèves</th>
+                            <th className={thClass + " w-14"}></th>
                         </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -449,9 +449,9 @@ export function RefadminView() {
                                 const nbEleves = eleves.filter((e) => e.eleve_profile?.promotion?.id === p.id).length;
                                 return (
                                     <tr key={p.id} className="transition-colors hover:bg-slate-50">
-                                        <td className={tdClass}>{p.nom}</td>
-                                        <td className={tdClass}>{p.filiere?.nom}</td>
-                                        <td className={tdClass + " text-slate-500"}>{p.date_debut} → {p.date_fin}</td>
+                                        <td className={tdClass + " truncate"}>{p.nom}</td>
+                                        <td className={tdClass + " truncate"}>{p.filiere?.nom}</td>
+                                        <td className={tdClass + " truncate text-slate-500"}>{p.date_debut} → {p.date_fin}</td>
                                         <td className={tdClass}>
                                             <span
                                                 className={
@@ -491,12 +491,12 @@ export function RefadminView() {
 
             case "eleves":
                 return (
-                    <table className="w-full border-collapse">
-                        <thead>
+                    <table className="w-full table-fixed border-collapse">
+                        <thead className="sticky top-0 bg-white">
                         <tr className="border-b border-slate-200">
-                            <th className={thClass}>Nom</th>
-                            <th className={thClass}>Email</th>
-                            <th className={thClass}>Promotion actuelle</th>
+                            <th className={thClass + " w-1/4"}>Nom</th>
+                            <th className={thClass + " w-1/3"}>Email</th>
+                            <th className={thClass + " w-1/5"}>Promotion actuelle</th>
                             <th className={thClass}>Réassigner</th>
                         </tr>
                         </thead>
@@ -506,9 +506,9 @@ export function RefadminView() {
                         ) : (
                             eleves.map((e) => (
                                 <tr key={e.id} className="transition-colors hover:bg-slate-50">
-                                    <td className={tdClass}>{e.first_name} {e.last_name}</td>
-                                    <td className={tdClass + " text-slate-500"}>{e.email}</td>
-                                    <td className={tdClass}>{e.eleve_profile?.promotion?.nom ?? "—"}</td>
+                                    <td className={tdClass + " truncate"}>{e.first_name} {e.last_name}</td>
+                                    <td className={tdClass + " truncate text-slate-500"}>{e.email}</td>
+                                    <td className={tdClass + " truncate"}>{e.eleve_profile?.promotion?.nom ?? "—"}</td>
                                     <td className={tdClass}>
                                         <select
                                             className={inputClass + " max-w-xs"}
@@ -588,7 +588,9 @@ export function RefadminView() {
                     )}
                 </div>
 
-                {renderTable()}
+                <div className="h-[420px] overflow-y-auto">
+                    {renderTable()}
+                </div>
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
