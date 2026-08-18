@@ -1,11 +1,12 @@
 import './App.css'
-import {getCurrentUser, logout,} from "./services/authService";
-import {RefadminView} from "./components/views/RefAdmin/RefAdminView.jsx";
-import {useEffect, useState} from "react";
-import  {Login} from "./components/views/Authenfication/Login.jsx";
+import { getCurrentUser, logout } from "./services/authService";
+import { RefadminView } from "./components/views/RefAdmin/RefAdminView.jsx";
+import { useEffect, useState } from "react";
+import { Login } from "./components/views/Authenfication/Login.jsx";
+import  Profil  from "./components/views/Profil/ProfilView.jsx";
 import Header from "./components/layouts/Header.jsx";
 import Footer from "./components/layouts/Footer.jsx";
-
+import { Routes, Route } from "react-router-dom";
 
 export const App = () => {
 
@@ -15,7 +16,6 @@ export const App = () => {
     useEffect(() => {
         const checkAuthentication = async () => {
             const currentUser = await getCurrentUser();
-
             setUser(currentUser);
             setLoading(false);
         };
@@ -24,7 +24,6 @@ export const App = () => {
     }, []);
 
     const handleLogin = (user) => {
-        console.log("USER APP :", user);
         setUser(user);
     };
 
@@ -38,78 +37,155 @@ export const App = () => {
     }
 
     if (!user) {
-        return (
-            <Login
-                onLogin={handleLogin}
-            />
-        );
+        return <Login onLogin={handleLogin} />;
     }
 
     switch (user.role) {
 
-      /*  case "ADMIN":
+        /* case "ADMIN":
             return (
                 <>
-                <Header
-                    user={user}
-                    onLogout={handleLogout}
-                />
-                <AdminView
-                    user={user}
-                    onLogout={handleLogout}
-                />
-                <Footer />
+                    <Header
+                        user={user}
+                        onLogout={handleLogout}
+                    />
+
+                    <Routes>
+                        <Route
+                            path="/profil"
+                            element={
+                                <Profil
+                                    user={user}
+                                    onLogout={handleLogout}
+                                />
+                            }
+                        />
+
+                        <Route
+                            path="/*"
+                            element={
+                                <AdminView
+                                    user={user}
+                                    onLogout={handleLogout}
+                                />
+                            }
+                        />
+                    </Routes>
+
+                    <Footer />
                 </>
-            );*/
+            ); */
 
         case "REF":
             return (
                 <>
-                <Header
-                    user={user}
-                    onLogout={handleLogout}
-                />
-                <RefadminView
-                    user={user}
-                    onLogout={handleLogout}
-                />
-                <Footer />
+                    <div className="flex flex-col min-h-screen">
+                        <Header
+                            user={user}
+                            onLogout={handleLogout}
+                        />
+
+                        <div className="flex-1">
+                            <Routes>
+                                <Route
+                                    path="/profil"
+                                    element={
+                                        <Profil
+                                            user={user}
+                                            onLogout={handleLogout}
+                                        />
+                                    }
+                                />
+
+                                <Route
+                                    path="/*"
+                                    element={
+                                        <RefadminView
+                                            user={user}
+                                            onLogout={handleLogout}
+                                        />
+                                    }
+                                />
+                            </Routes>
+                        </div>
+
+                        <Footer />
+                    </div>
                 </>
             );
 
-       /* case "FORMATEUR":
-           return (
-                <Header
-                    user={user}
-                    onLogout={handleLogout}
-                />
-                <FormateurView
-                    user={user}
-                    onLogout={handleLogout}
-                />
-                <Footer />
-                </>
-            );
-
-        case "ELEVE":
+        /* case "FORMATEUR":
             return (
-                 <Header
-                    user={user}
-                    onLogout={handleLogout}
-                />
-                <EleveView
-                    user={user}
-                    onLogout={handleLogout}
-                />
-                <Footer />
+                <>
+                    <Header
+                        user={user}
+                        onLogout={handleLogout}
+                    />
+
+                    <Routes>
+                        <Route
+                            path="/profil"
+                            element={
+                                <Profil
+                                    user={user}
+                                    onLogout={handleLogout}
+                                />
+                            }
+                        />
+
+                        <Route
+                            path="/*"
+                            element={
+                                <FormateurView
+                                    user={user}
+                                    onLogout={handleLogout}
+                                />
+                            }
+                        />
+                    </Routes>
+
+                    <Footer />
                 </>
-                );
-*/
+            ); */
+
+        /* case "ELEVE":
+            return (
+                <>
+                    <Header
+                        user={user}
+                        onLogout={handleLogout}
+                    />
+
+                    <Routes>
+                        <Route
+                            path="/profil"
+                            element={
+                                <Profil
+                                    user={user}
+                                    onLogout={handleLogout}
+                                />
+                            }
+                        />
+
+                        <Route
+                            path="/*"
+                            element={
+                                <EleveView
+                                    user={user}
+                                    onLogout={handleLogout}
+                                />
+                            }
+                        />
+                    </Routes>
+
+                    <Footer />
+                </>
+            ); */
+
         default:
             handleLogout();
             return null;
     }
 };
-
 
 export default App

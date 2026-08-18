@@ -1,30 +1,12 @@
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export const Header = ({ user, onLogout }) => {
 
     const [userMenuOpen, setUserMenuOpen] = useState(false);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-    const navigation = [
-        { label: "Promotions", path: "/promotions" },
-        { label: "Filières", path: "/filieres" },
-        { label: "Cursus", path: "/cursus" },
-        { label: "Cours", path: "/cours" },
-        { label: "Élèves", path: "/eleves" },
-        { label: "Calendrier", path: "/calendrier" },
-    ];
-
-    const navLinkClass = ({ isActive }) =>
-        `relative text-sm font-medium transition-colors duration-200 ${
-            isActive
-                ? "text-[#2563EB]"
-                : "text-[#64748B] hover:text-[#2563EB]"
-        }`;
 
     const handleLogout = () => {
         setUserMenuOpen(false);
-        setMobileMenuOpen(false);
         onLogout();
     };
 
@@ -97,29 +79,17 @@ export const Header = ({ user, onLogout }) => {
                     <Link
                         to="/"
                         className="flex items-center gap-3"
-                        onClick={() => setMobileMenuOpen(false)}
                     >
-                        <div
-                            className="
-                                w-10
-                                h-10
-                                bg-[#2563EB]
-                                rounded-lg
-                                flex
-                                items-center
-                                justify-center
-                                text-white
-                                font-bold
-                                text-lg
-                            "
-                        >
-                            BM
-                        </div>
+                        <img
+                            src="/favicon.svg"
+                            alt="PlanEdu"
+                            className="w-30 h-30"
+                        />
 
                         <div className="hidden sm:block">
 
                             <h1 className="text-base font-bold text-[#172A3A]">
-                                Service pédagogique
+                                PlanEdu
                             </h1>
 
                             <p className="text-xs text-[#64748B]">
@@ -128,45 +98,6 @@ export const Header = ({ user, onLogout }) => {
 
                         </div>
                     </Link>
-
-                    {/* Navigation ordinateur */}
-                    <nav
-                        className="hidden lg:flex items-center gap-6"
-                        aria-label="Navigation principale"
-                    >
-
-                        {navigation.map((item) => (
-
-                            <NavLink
-                                key={item.path}
-                                to={item.path}
-                                end={item.path === "/"}
-                                className={navLinkClass}
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        {item.label}
-
-                                        {isActive && (
-                                            <span
-                                                className="
-                                                    absolute
-                                                    -bottom-[22px]
-                                                    left-0
-                                                    right-0
-                                                    h-0.5
-                                                    bg-[#2563EB]
-                                                    rounded-full
-                                                "
-                                            />
-                                        )}
-                                    </>
-                                )}
-                            </NavLink>
-
-                        ))}
-
-                    </nav>
 
                     {/* Partie utilisateur */}
                     <div className="flex items-center gap-3">
@@ -294,76 +225,9 @@ export const Header = ({ user, onLogout }) => {
 
                         </div>
 
-                        {/* Bouton menu mobile */}
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setMobileMenuOpen(!mobileMenuOpen)
-                            }
-                            className="
-                                lg:hidden
-                                w-10
-                                h-10
-                                rounded-lg
-                                border
-                                border-gray-200
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                gap-1
-                                hover:bg-[#F8FAFC]
-                                transition
-                            "
-                            aria-label="Ouvrir le menu de navigation"
-                            aria-expanded={mobileMenuOpen}
-                        >
-                            <span className="w-5 h-0.5 bg-[#172A3A]" />
-                            <span className="w-5 h-0.5 bg-[#172A3A]" />
-                            <span className="w-5 h-0.5 bg-[#172A3A]" />
-                        </button>
-
                     </div>
 
                 </div>
-
-                {/* Navigation mobile */}
-                {mobileMenuOpen && (
-
-                    <nav
-                        className="lg:hidden border-t border-gray-200 py-4"
-                        aria-label="Navigation mobile"
-                    >
-
-                        <div className="flex flex-col gap-1">
-
-                            {navigation.map((item) => (
-
-                                <NavLink
-                                    key={item.path}
-                                    to={item.path}
-                                    end={item.path === "/"}
-                                    onClick={() =>
-                                        setMobileMenuOpen(false)
-                                    }
-                                    className={({ isActive }) =>
-                                        `px-3 py-3 rounded-lg text-sm font-medium transition ${
-                                            isActive
-                                                ? "bg-blue-50 text-[#2563EB]"
-                                                : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#2563EB]"
-                                        }`
-                                    }
-                                >
-                                    {item.label}
-                                </NavLink>
-
-                            ))}
-
-                        </div>
-
-                    </nav>
-
-                )}
 
             </div>
 
