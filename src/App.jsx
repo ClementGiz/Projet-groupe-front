@@ -2,8 +2,9 @@ import './App.css'
 import {getCurrentUser, logout,} from "./services/authService";
 import {RefadminView} from "./components/views/RefAdmin/RefAdminView.jsx";
 import {useEffect, useState} from "react";
-import Login from "./pages/login.jsx";
-
+import  {Login} from "./components/views/Authenfication/Login.jsx";
+import Header from "./components/layouts/Header.jsx";
+import Footer from "./components/layouts/Footer.jsx";
 
 
 export const App = () => {
@@ -48,33 +49,60 @@ export const App = () => {
 
       /*  case "ADMIN":
             return (
+                <>
+                <Header
+                    user={user}
+                    onLogout={handleLogout}
+                />
                 <AdminView
                     user={user}
                     onLogout={handleLogout}
                 />
+                <Footer />
+                </>
             );*/
 
         case "REF":
             return (
+                <>
+                <Header
+                    user={user}
+                    onLogout={handleLogout}
+                />
                 <RefadminView
                     user={user}
                     onLogout={handleLogout}
                 />
+                <Footer />
+                </>
             );
 
        /* case "FORMATEUR":
            return (
-               <FormateurView
-                   user={user}
+                <Header
+                    user={user}
                     onLogout={handleLogout}
                 />
+                <FormateurView
+                    user={user}
+                    onLogout={handleLogout}
+                />
+                <Footer />
+                </>
             );
 
         case "ELEVE":
             return (
+                 <Header
+                    user={user}
+                    onLogout={handleLogout}
+                />
                 <EleveView
                     user={user}
                     onLogout={handleLogout}
+                />
+                <Footer />
+                </>
                 );
 */
         default:
