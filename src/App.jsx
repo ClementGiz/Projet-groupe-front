@@ -7,6 +7,7 @@ import {AdminView} from "./components/Views/Administrateur/AdminView.jsx";
 
 
 
+
 export const App = () => {
 
     const [user, setUser] = useState(null);
@@ -69,15 +70,16 @@ export const App = () => {
                    user={user}
                     onLogout={handleLogout}
                 />
-            );
+            );*/
 
-        case "ELEVE":
+        /*case "ELEVE":
             return (
-                <EleveView
+                /*<EleveView
                     user={user}
-                    onLogout={handleLogout}
-                );
-*/
+                    onLogout={handleLogout}/>
+                <Calendar />
+                );*/
+
         default:
             handleLogout();
             return null;

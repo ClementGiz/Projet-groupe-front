@@ -1,10 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { getUsers } from "../../../services/adminService.js";
+import { AddUserModal } from "../../modals/Administrateur/AddUserModal.jsx";
+import { EditUserModal } from "../../modals/Administrateur/EditUserModal.jsx";
+import { DeleteUserModal } from "../../modals/Administrateur/DeleteUserModal.jsx";
 
 export function AdminView() {
-    const [usersData, setUsersData] = useState(null);
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(null);
+    const [toastMessage, setToastMessage] = useState(null);
+
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
+    const [deletingUser, setDeletingUser] = useState(null);
+
+    const showToast = (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 3500);
+    };
 
     const loadAllUsers = async () => {
         setLoading(true);
@@ -12,7 +25,7 @@ export function AdminView() {
 
         try {
             const res = await getUsers();
-            setUsersData(res.data);
+            setUsers(Array.isArray(res.data) ? res.data : (res.data?.users || []));
         } catch (error) {
             console.error("Erreur API :", error);
             setLoadError("Impossible de charger les données. Vérifiez que l'API est bien démarrée.");
@@ -25,10 +38,6 @@ export function AdminView() {
         loadAllUsers();
     }, []);
 
-    const userList = Array.isArray(usersData)
-        ? usersData
-        : (usersData?.users || []);
-
     const getRoleBadge = (rawRole) => {
         const role = (rawRole || '').toLowerCase().trim();
 
@@ -39,7 +48,6 @@ export function AdminView() {
                 </span>
             );
         }
-
         if (role.includes('ref')) {
             return (
                 <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[12px] font-semibold text-[#F59E0B] border border-amber-200">
@@ -47,7 +55,6 @@ export function AdminView() {
                 </span>
             );
         }
-
         if (role.includes('formateur') || role.includes('teacher') || role.includes('trainer')) {
             return (
                 <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[12px] font-semibold text-[#10B981] border border-emerald-200">
@@ -55,7 +62,6 @@ export function AdminView() {
                 </span>
             );
         }
-
         return (
             <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[12px] font-semibold text-[#2563EB] border border-blue-200">
                 {rawRole || 'Élève'}
@@ -64,8 +70,14 @@ export function AdminView() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] p-6 md:p-8 font-sans">
-            {/* Header de la vue */}
+        <div className="min-h-screen bg-[#F8FAFC] p-6 md:p-8 font-sans relative">
+
+            {toastMessage && (
+                <div className="fixed bottom-6 right-6 z-50 rounded-lg bg-[#10B981] px-4 py-3 text-[14px] font-medium text-white shadow-lg transition-all animate-bounce">
+                    ✓ {toastMessage}
+                </div>
+            )}
+
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-[24px] font-bold text-[#0F172A]">
@@ -78,12 +90,11 @@ export function AdminView() {
 
                 <button
                     type="button"
+                    onClick={() => setIsAddModalOpen(true)}
                     className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2563EB] px-4 py-2.5 text-[14px] font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2 cursor-pointer"
                 >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Ajouter un utilisateur
+
+                    + Ajouter un utilisateur
                 </button>
             </div>
 
@@ -124,24 +135,20 @@ export function AdminView() {
                             <tr>
                                 <td colSpan={4} className="px-6 py-12 text-center text-[14px] text-[#64748B]">
                                     <div className="inline-flex items-center gap-2">
-                                        <svg className="h-5 w-5 animate-spin text-[#2563EB]" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
                                         Chargement des utilisateurs...
                                     </div>
                                 </td>
                             </tr>
-                        ) : userList.length === 0 ? (
+                        ) : users.length === 0 ? (
                             <tr>
                                 <td colSpan={4} className="px-6 py-12 text-center text-[14px] text-[#64748B]">
                                     Aucun utilisateur enregistré
                                 </td>
                             </tr>
                         ) : (
-                            userList.map((user, index) => (
+                            users.map((user) => (
                                 <tr
-                                    key={user.id || index}
+                                    key={user.id}
                                     className="transition-colors hover:bg-slate-50/80"
                                 >
                                     <td className="px-6 py-4 text-[14px] font-medium text-[#0F172A] whitespace-nowrap">
@@ -162,6 +169,7 @@ export function AdminView() {
                                                 type="button"
                                                 title="Modifier l'utilisateur"
                                                 aria-label="Modifier"
+                                                onClick={() => setEditingUser(user)}
                                                 className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[15px] transition-colors hover:bg-slate-100 cursor-pointer"
                                             >
                                                 ✏️
@@ -170,7 +178,8 @@ export function AdminView() {
                                                 type="button"
                                                 title="Supprimer l'utilisateur"
                                                 aria-label="Supprimer"
-                                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[15px] transition-colors hover:bg-red-50 hover:text-[#EF4444] cursor-pointer"
+                                                onClick={() => setDeletingUser(user)}
+                                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[15px] transition-colors hover:bg-red-50 cursor-pointer"
                                             >
                                                 🗑️
                                             </button>
@@ -183,6 +192,35 @@ export function AdminView() {
                     </table>
                 </div>
             </div>
+
+            <AddUserModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onSuccess={() => {
+                    loadAllUsers();
+                    showToast("Utilisateur créé avec succès");
+                }}
+            />
+
+            <EditUserModal
+                isOpen={Boolean(editingUser)}
+                user={editingUser}
+                onClose={() => setEditingUser(null)}
+                onSuccess={() => {
+                    loadAllUsers();
+                    showToast("Utilisateur mis à jour");
+                }}
+            />
+
+            <DeleteUserModal
+                isOpen={Boolean(deletingUser)}
+                user={deletingUser}
+                onClose={() => setDeletingUser(null)}
+                onSuccess={() => {
+                    loadAllUsers();
+                    showToast("Utilisateur supprimé");
+                }}
+            />
         </div>
     );
 }
