@@ -4,7 +4,8 @@ import {RefadminView} from "./components/views/RefAdmin/RefAdminView.jsx";
 import {useEffect, useState} from "react";
 import {Login} from "./components/views/Authenfication/Authentification.jsx";
 import {AdminView} from "./components/Views/Administrateur/AdminView.jsx";
-import {FormateurView} from "./components/views/Formateur/FormateurView.jsx";
+
+
 
 
 export const App = () => {
@@ -61,15 +62,15 @@ export const App = () => {
                     user={user}
                     onLogout={handleLogout}
                 />
-            );*/
+            );
 
-        case "FORMATEUR":
+       /* case "FORMATEUR":
            return (
                <FormateurView
                    user={user}
                     onLogout={handleLogout}
                 />
-            );
+            );*/
 
         /*case "ELEVE":
             return (
