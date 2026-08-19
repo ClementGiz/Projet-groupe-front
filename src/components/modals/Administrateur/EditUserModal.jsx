@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { updateUser } from '../../../services/adminService.js';
+import { updateUser } from '../../../services/adminService/adminService.js';
 
 export function EditUserModal({ isOpen, user, onClose, onSuccess }) {
     const [formData, setFormData] = useState({

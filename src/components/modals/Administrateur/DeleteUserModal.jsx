@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { deleteUser } from '../../../services/adminService.js';
+import { deleteUser } from '../../../services/adminService/adminService.js';
 
 export function DeleteUserModal({ isOpen, user, onClose, onSuccess }) {
     const [loading, setLoading] = useState(false);

@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {getMyCourses} from "../../../services/formateurService.js";
+import {getMyCourses} from "../../../services/formateurService/formateurService.js";
 import {PromotionElevesModal} from "../../modals/Formateur/PromotionElevesModal.jsx";
 
 export function FormateurView() {

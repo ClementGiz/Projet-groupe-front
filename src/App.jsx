@@ -1,5 +1,5 @@
 import './App.css'
-import {getCurrentUser, logout,} from "./services/authService";
+import {getCurrentUser, logout,} from "./services/auth/authService.js";
 import {RefadminView} from "./components/views/RefAdmin/RefAdminView.jsx";
 import {useEffect, useState} from "react";
 import {Login} from "./components/views/Authenfication/Login.jsx";

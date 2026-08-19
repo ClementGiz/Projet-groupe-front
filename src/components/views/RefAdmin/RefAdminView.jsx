@@ -11,7 +11,7 @@ import {
     getEleves, updateEleve,
     getFormateurs,
     getCoursDonnes, createCoursDonne, updateCoursDonne, deleteCoursDonne,
-} from '../../../services/refadminService.js';
+} from '../../../services/refAdminService/refadminService.js';
 
 const TABS = [
     { key: "filieres", label: "Filières" },
