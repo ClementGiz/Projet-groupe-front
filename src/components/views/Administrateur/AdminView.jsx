@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getUsers } from "../../../services/adminService.js";
+import { getUsers } from "../../../services/adminService/adminService.js";
 import { AddUserModal } from "../../modals/Administrateur/AddUserModal.jsx";
 import { EditUserModal } from "../../modals/Administrateur/EditUserModal.jsx";
 import { DeleteUserModal } from "../../modals/Administrateur/DeleteUserModal.jsx";

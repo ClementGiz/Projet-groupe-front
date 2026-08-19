@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createUser } from '../../../services/adminService.js';
+import { createUser } from '../../../services/adminService/adminService.js';
 
 const INITIAL_FORM = {
     first_name: '',

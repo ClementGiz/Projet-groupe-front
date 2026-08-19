@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getElevesByPromotion } from '../../../services/formateurService.js';
+import { getElevesByPromotion } from '../../../services/formateurService/formateurService.js';
 
 export function PromotionElevesModal({ isOpen, course, onClose }) {
     const [eleves, setEleves] = useState([]);

@@ -1,4 +1,4 @@
-import api from './api'; // Import de l'instance Axios centralisée
+import api from '../api.js'; // Import de l'instance Axios centralisée
 
 // Récupérer les données du profil de l'utilisateur connecté
 export const getMyProfile = async () => {
