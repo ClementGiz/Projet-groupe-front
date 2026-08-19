@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Calendar from "../../elements/Calendar.jsx";
-import { getMyPlanning } from "../../../services/planningService";
 import { getCurrentUser } from "../../../services/authService";
+import api from "../../../services/api"; // Instance Axios configurée avec le token
 
 export default function StudentDashboard() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
+    const [calendarEvents, setCalendarEvents] = useState([]);
     const [upcomingCourses, setUpcomingCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const loadDashboardData = async () => {
+        const fetchDashboardData = async () => {
             try {
                 setError(null);
                 setLoading(true);
@@ -21,13 +22,26 @@ export default function StudentDashboard() {
                 const userData = await getCurrentUser();
                 setUser(userData);
 
-                // 2. Récupération des cours via planningService
-                const data = await getMyPlanning();
-                const list = Array.isArray(data) ? data : (data.cours_donnes || []);
+                // 2. Appel API direct vers /planning/me/
+                const response = await api.get('/planning/me/');
+                const rawData = response.data;
+                const rawList = Array.isArray(rawData) ? rawData : (rawData.cours_donnes || []);
 
-                // 3. Filtrer et trier les prochains cours
+                // 3. Formatage de la liste pour le composant <Calendar />
+                const formattedEvents = rawList.map((item) => ({
+                    id: item.id,
+                    title: item.cours?.cours?.libelle || item.title || 'Cours',
+                    promotion: item.promotion?.nom || '',
+                    date: item.date_debut, // Format YYYY-MM-DD attendu par Calendar
+                    date_fin: item.date_fin || null,
+                    type: item.type || 'cours'
+                }));
+
+                setCalendarEvents(formattedEvents);
+
+                // 4. Filtrage des 4 prochains cours à venir
                 const today = new Date().toISOString().split('T')[0];
-                const upcoming = list
+                const upcoming = rawList
                     .filter(c => c.date_debut >= today)
                     .sort((a, b) => new Date(a.date_debut) - new Date(b.date_debut))
                     .slice(0, 4);
@@ -41,13 +55,13 @@ export default function StudentDashboard() {
             }
         };
 
-        loadDashboardData();
+        fetchDashboardData();
     }, []);
 
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-6 bg-slate-50 min-h-screen font-sans">
 
-            {/* Banner d'erreur si la requête échoue */}
+            {/* Banner d'erreur */}
             {error && (
                 <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center justify-between">
                     <span>{error}</span>
@@ -77,12 +91,12 @@ export default function StudentDashboard() {
                 )}
             </div>
 
-            {/* Grille principale : Calendrier (2/3) + Sidebar (1/3) */}
+            {/* Grille principale */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* Calendrier du planning */}
+                {/* Calendrier purement visuel */}
                 <div className="lg:col-span-2">
-                    <Calendar />
+                    <Calendar events={calendarEvents} />
                 </div>
 
                 {/* Sidebar Droite */}
@@ -115,7 +129,7 @@ export default function StudentDashboard() {
                                                 className="text-slate-400 hover:text-blue-600 transition-colors"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                                 </svg>
                                             </button>
                                         </div>
@@ -133,7 +147,7 @@ export default function StudentDashboard() {
                         )}
                     </div>
 
-                    {/* Carte Messagerie & Support */}
+                    {/* Support & Messagerie */}
                     <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 space-y-3">
                         <div className="space-y-1">
                             <h3 className="text-xs font-bold text-blue-900">Une question sur vos cours ?</h3>
