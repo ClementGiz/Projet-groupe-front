@@ -1,102 +1,53 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { login } from "../../../services/auth/authService.js";
 
-function Login() {
-    const navigate = useNavigate();
+export const Login = ({ onLogin }) => {
 
-    const [email, setEmail] = useState("");
+    const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
+
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (event) => {
+        event.preventDefault();
 
         setError("");
 
-        if (!email.trim() || !password.trim()) {
-            setError("Veuillez renseigner votre adresse e-mail et votre mot de passe.");
+        if (!username.trim() || !password.trim()) {
+            setError(
+                "Veuillez renseigner votre nom d'utilisateur et votre mot de passe."
+            );
             return;
         }
 
         setLoading(true);
 
         try {
-            const response = await fetch("http://localhost:8000/api/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    email: email.trim(),
-                    password,
-                }),
-            });
+            const data = await login(username, password);
 
-            let data = {};
+            console.log("DATA LOGIN :", data);
+            console.log("USER LOGIN :", data.user);
 
-            try {
-                data = await response.json();
-            } catch {
-                // Le backend n'a pas renvoyé de JSON exploitable
-            }
+            onLogin(data.user);
 
-            if (!response.ok) {
-                if (response.status === 401) {
-                    throw new Error("Adresse e-mail ou mot de passe incorrect.");
-                }
+        } catch (error) {
 
-                if (response.status === 403) {
-                    throw new Error("Vous n'êtes pas autorisé à accéder à cette application.");
-                }
-
-                throw new Error(
-                    data.message ||
-                    data.detail ||
-                    "Une erreur est survenue lors de la connexion."
-                );
-            }
-
-            if (!data.access) {
-                throw new Error(
-                    "Le serveur n'a pas renvoyé de token d'authentification."
-                );
-            }
-
-
-            localStorage.setItem("access_token", data.access);
-
-            if (data.refresh) {
-                localStorage.setItem("refresh_token", data.refresh);
-            }
-
-            /*
-             * Préparation pour le Header.
-             * Si le backend renvoie les informations utilisateur,
-             * elles seront disponibles plus tard.
-             */
-            if (data.user) {
-                localStorage.setItem("user", JSON.stringify(data.user));
-            }
-
-            localStorage.setItem(
-                "remember_me",
-                JSON.stringify(rememberMe)
-            );
-
-            navigate("/");
-        } catch (err) {
-            if (err instanceof TypeError) {
+            if (error.response) {
                 setError(
-                    "Impossible de contacter le serveur. Vérifiez que le backend est démarré."
+                    error.response.data.message ||
+                    error.response.data.detail ||
+                    "Identifiants incorrects."
                 );
             } else {
                 setError(
-                    err.message || "Une erreur inattendue est survenue."
+                    "Impossible de contacter le serveur."
                 );
             }
+
         } finally {
             setLoading(false);
         }
@@ -123,7 +74,9 @@ function Login() {
                                 text-white
                                 text-xl
                                 font-bold
-                                shadow-sm ">
+                                shadow-sm
+                            "
+                        >
                             BM
                         </div>
                     </div>
@@ -154,27 +107,28 @@ function Login() {
                     <form
                         onSubmit={handleSubmit}
                         className="space-y-5"
-                        noValidate
                     >
 
-                        {/* E-mail */}
+                        {/* Nom d'utilisateur */}
                         <div>
 
                             <label
-                                htmlFor="email"
+                                htmlFor="username"
                                 className="block text-sm font-medium text-[#172A3A] mb-2"
                             >
-                                Adresse e-mail
+                                Nom d'utilisateur
                             </label>
 
                             <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="prenom.nom@email.com"
+                                id="username"
+                                name="username"
+                                type="text"
+                                autoComplete="username"
+                                value={username}
+                                onChange={(event) =>
+                                    setUsername(event.target.value)
+                                }
+                                placeholder="Votre nom d'utilisateur"
                                 disabled={loading}
                                 required
                                 className="
@@ -193,7 +147,9 @@ function Login() {
                                     focus:ring-2
                                     focus:ring-blue-100
                                     disabled:bg-gray-100
-                                    disabled:cursor-not-allowed "/>
+                                    disabled:cursor-not-allowed
+                                "
+                            />
 
                         </div>
 
@@ -202,7 +158,8 @@ function Login() {
 
                             <label
                                 htmlFor="password"
-                                className="block text-sm font-medium text-[#172A3A] mb-2">
+                                className="block text-sm font-medium text-[#172A3A] mb-2"
+                            >
                                 Mot de passe
                             </label>
 
@@ -214,7 +171,9 @@ function Login() {
                                     type={showPassword ? "text" : "password"}
                                     autoComplete="current-password"
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={(event) =>
+                                        setPassword(event.target.value)
+                                    }
                                     placeholder="Votre mot de passe"
                                     disabled={loading}
                                     required
@@ -235,9 +194,13 @@ function Login() {
                                         focus:ring-2
                                         focus:ring-blue-100
                                         disabled:bg-gray-100
-                                        disabled:cursor-not-allowed "/>
+                                        disabled:cursor-not-allowed
+                                    "
+                                />
 
-                                <button type="button" onClick={() =>
+                                <button
+                                    type="button"
+                                    onClick={() =>
                                         setShowPassword(!showPassword)
                                     }
                                     disabled={loading}
@@ -259,7 +222,9 @@ function Login() {
                                             : "Afficher le mot de passe"
                                     }
                                 >
-                                    {showPassword ? "Masquer" : "Afficher"}
+                                    {showPassword
+                                        ? "Masquer"
+                                        : "Afficher"}
                                 </button>
 
                             </div>
@@ -269,40 +234,21 @@ function Login() {
                         {/* Options */}
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 
-                            <label
-                                htmlFor="rememberMe"
-                                className="flex items-center gap-2 text-sm text-[#64748B] cursor-pointer"
-                            >
-                                <input
-                                    id="rememberMe"
-                                    type="checkbox"
-                                    checked={rememberMe}
-                                    onChange={(e) =>
-                                        setRememberMe(e.target.checked)
-                                    }
-                                    disabled={loading}
-                                    className="
-                                        w-4
-                                        h-4
-                                        rounded
-                                        border-gray-300
-                                        accent-[#2563EB]"/>
-                                Se souvenir de moi
-                            </label>
-
-                            <button
-                                type="button"
-                                className="text-sm text-[#2563EB] font-medium hover:underline text-left">
-                                Mot de passe oublié ?
-                            </button>
-
                         </div>
 
                         {/* Erreur */}
                         {error && (
                             <div
-                                className="bg-red-50 border border-red-200 rounded-lg px-4 py-3"
-                                role="alert">
+                                className="
+                                    bg-red-50
+                                    border
+                                    border-red-200
+                                    rounded-lg
+                                    px-4
+                                    py-3
+                                "
+                                role="alert"
+                            >
                                 <p className="text-sm text-red-700">
                                     {error}
                                 </p>
@@ -330,10 +276,13 @@ function Login() {
                                 focus:ring-offset-2
                                 transition
                                 disabled:opacity-60
-                                disabled:cursor-not-allowed ">
+                                disabled:cursor-not-allowed
+                            "
+                        >
                             {loading
                                 ? "Connexion en cours..."
-                                : "Se connecter"}
+                                : "Se connecter"
+                            }
                         </button>
 
                     </form>
@@ -342,8 +291,8 @@ function Login() {
                     <div className="mt-7 pt-5 border-t border-gray-200">
 
                         <p className="text-xs text-center text-[#64748B] leading-5">
-                            L'accès à cette application est réservé aux utilisateurs
-                            disposant d'un compte autorisé.
+                            L'accès à cette application est réservé aux
+                            utilisateurs disposant d'un compte autorisé.
                         </p>
 
                     </div>
@@ -354,6 +303,4 @@ function Login() {
 
         </div>
     );
-}
-
-export default Login;
+};
