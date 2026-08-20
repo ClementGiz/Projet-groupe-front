@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Calendar from "../../elements/Calendar.jsx";
-import { getCurrentUser } from "../../../services/authService";
-import api from "../../../services/api"; // Instance Axios configurée avec le token
+import { getCurrentUser } from "../../../services/auth/authService.js";
+import api from "../../../services/api.js"; // Instance Axios configurée avec le token
 
-export default function StudentDashboard() {
+export default function StudentDashboardView() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [calendarEvents, setCalendarEvents] = useState([]);

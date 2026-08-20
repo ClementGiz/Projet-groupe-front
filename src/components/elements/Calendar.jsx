@@ -1,51 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { getMyPlanning } from '../../services/planningService';
 
 export default function Calendar({ events: externalEvents, onEventClick }) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [internalEvents, setInternalEvents] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
 
-    // Chargement automatique depuis l'API Django si aucun tableau d'événements n'est transmis
+    // Mise à jour des événements à partir des props reçues
     useEffect(() => {
         if (externalEvents && externalEvents.length > 0) {
             setInternalEvents(externalEvents);
-            return;
         }
-
-        const fetchPlanning = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const responseData = await getMyPlanning();
-
-                // Extraction de la liste (s'adapte si le backend renvoie un tableau direct ou un objet)
-                const rawList = Array.isArray(responseData)
-                    ? responseData
-                    : (responseData.cours_donnes || responseData.results || []);
-
-                // Mapping selon les relations BDD Django (CoursDonne -> CursusCours -> Cours)
-                const formattedEvents = rawList.map((item) => ({
-                    id: item.id,
-                    title: item.cours?.cours?.libelle || item.title || 'Cours sans titre',
-                    promotion: item.promotion?.nom || item.promotion_nom || '',
-                    date: item.date_debut || item.date, // Format YYYY-MM-DD
-                    date_fin: item.date_fin || null,
-                    time: item.horaire || (item.date_fin ? `Jusqu'au ${item.date_fin}` : ''),
-                    type: item.type || 'cours'
-                }));
-
-                setInternalEvents(formattedEvents);
-            } catch (err) {
-                console.error("Erreur lors de la récupération du planning :", err);
-                setError("Impossible de charger le planning.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchPlanning();
     }, [externalEvents]);
 
     // Source unique d'événements
@@ -97,7 +60,7 @@ export default function Calendar({ events: externalEvents, onEventClick }) {
         return activeEvents.filter((event) => event.date === dateKey);
     };
 
-    // Palette visuelle conforme à la charte graphique[cite: 1]
+    // Palette visuelle des badges
     const getEventBadgeStyle = (type) => {
         switch (type) {
             case 'cours':
@@ -122,8 +85,6 @@ export default function Calendar({ events: externalEvents, onEventClick }) {
                     <h2 className="text-lg font-semibold text-slate-900">
                         {monthNames[month]} {year}
                     </h2>
-                    {loading && <span className="text-xs font-medium text-blue-600 animate-pulse">Chargement BDD...</span>}
-                    {error && <span className="text-xs font-medium text-red-500">{error}</span>}
                 </div>
 
                 <div className="flex items-center space-x-2">
