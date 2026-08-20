@@ -1,9 +1,12 @@
-import { useState } from "react";
+
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 export const Header = ({ user, onLogout }) => {
 
+
     const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const userMenuRef = useRef(null);
 
     const handleLogout = () => {
         setUserMenuOpen(false);
@@ -40,6 +43,30 @@ export const Header = ({ user, onLogout }) => {
 
         return user.username || "";
     };
+    useEffect(() => {
+        const handleOutsideClick = (event) => {
+            if (
+                userMenuRef.current &&
+                !userMenuRef.current.contains(event.target)
+            ) {
+                setUserMenuOpen(false);
+            }
+        };
+
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
+                setUserMenuOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleOutsideClick);
+        document.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.removeEventListener("mousedown", handleOutsideClick);
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, []);
 
     /*
      * Traduction du rôle technique de l'API
@@ -116,13 +143,12 @@ export const Header = ({ user, onLogout }) => {
                         </div>
 
                         {/* Menu utilisateur */}
-                        <div className="relative">
+                        <div ref={userMenuRef} className="relative">
 
                             <button
                                 type="button"
-                                onClick={() =>
-                                    setUserMenuOpen(!userMenuOpen)
-                                }
+                                onClick={() => setUserMenuOpen((open) => !open)}
+                                
                                 className="
                                     w-10
                                     h-10
@@ -166,8 +192,19 @@ export const Header = ({ user, onLogout }) => {
                                 >
 
                                     {/* Informations */}
-                                    <div className="px-4 py-4 border-b border-gray-100">
 
+
+                                    <Link
+                                        to="/"
+                                        onClick={() => setUserMenuOpen(false)}
+                                        className=" block
+                                                    px-4
+                                                    py-4
+                                                    border-b
+                                                    border-gray-100
+                                                    hover:bg-[#F8FAFC]
+                                                    transition-colors"
+                                    >
                                         <p className="text-sm font-semibold text-[#172A3A]">
                                             {getUserName()}
                                         </p>
@@ -175,8 +212,7 @@ export const Header = ({ user, onLogout }) => {
                                         <p className="text-xs text-[#64748B] mt-1">
                                             {getUserRole()}
                                         </p>
-
-                                    </div>
+                                    </Link>
 
                                     {/* Actions */}
                                     <div className="py-2">

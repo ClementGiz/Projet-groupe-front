@@ -61,24 +61,12 @@ export const Login = ({ onLogin }) => {
                 {/* Identité de l'application */}
                 <div className="text-center mb-6">
 
-                    <div className="flex justify-center mb-4">
-                        <div
-                            className="
-                                w-16
-                                h-16
-                                rounded-lg
-                                bg-[#2563EB]
-                                flex
-                                items-center
-                                justify-center
-                                text-white
-                                text-xl
-                                font-bold
-                                shadow-sm
-                            "
-                        >
-                            BM
-                        </div>
+                    <div className="flex justify-center mb-0">
+                        <img
+                            src="/favicon.svg"
+                            alt="Logo PlanEdu"
+                            className="w-30 h-30 object-contain -mb-6"
+                        />
                     </div>
 
                     <p className="text-sm font-semibold text-[#2563EB]">
