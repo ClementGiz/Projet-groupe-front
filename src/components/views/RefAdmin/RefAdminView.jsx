@@ -1,91 +1,17 @@
-import React, { useState } from 'react';
-import { styles } from './styles';
+import React, { useEffect, useState } from 'react';
 import { FiliereModal } from '../../modals/RefAdmin/FiliereModal';
 import { CursusModal } from '../../modals/RefAdmin/CursusModal';
 import { PromoModal } from '../../modals/RefAdmin/PromoModal';
-
-// --- Données initiales ---
-
-const initialFilieres = [
-    { id: 1, nom: "D2WM" },
-    { id: 2, nom: "EADL" },
-    { id: 3, nom: "CDA" },
-    { id: 4, nom: "TSSR" },
-];
-
-const initialCursusList = [
-    { id: 1, nom: "Web Development" },
-    { id: 2, nom: "Full-Stack Development" },
-    { id: 3, nom: "DevOps" },
-    { id: 4, nom: "Infrastructure" },
-];
-
-const initialPromotions = [
-    {
-        id: 1,
-        formationId: 1,
-        cursus: "Web Development",
-        nom: "D2WM2026",
-        enCours: true,
-        eleves: ["Alice Dupont", "Karim Benali"],
-    },
-    {
-        id: 2,
-        formationId: 1,
-        cursus: "Web Development",
-        nom: "D2WM2025",
-        enCours: false,
-        eleves: ["Julie Martin"],
-    },
-    {
-        id: 3,
-        formationId: 2,
-        cursus: "Full-Stack Development",
-        nom: "CDA2026",
-        enCours: true,
-        eleves: [],
-    },
-    {
-        id: 4,
-        formationId: 2,
-        cursus: "Full-Stack Development",
-        nom: "CDA2025",
-        enCours: false,
-        eleves: ["Léo Fabre"],
-    },
-    {
-        id: 5,
-        formationId: 3,
-        cursus: "DevOps",
-        nom: "EADL2026",
-        enCours: true,
-        eleves: [],
-    },
-    {
-        id: 6,
-        formationId: 3,
-        cursus: "DevOps",
-        nom: "EADL2025",
-        enCours: false,
-        eleves: [],
-    },
-    {
-        id: 7,
-        formationId: 4,
-        cursus: "Infrastructure",
-        nom: "TSSR2026",
-        enCours: true,
-        eleves: [],
-    },
-    {
-        id: 8,
-        formationId: 4,
-        cursus: "Infrastructure",
-        nom: "TSSR2025",
-        enCours: false,
-        eleves: [],
-    },
-];
+import { CoursDonneModal } from '../../modals/RefAdmin/CoursDonneModal';
+import { PlanningView } from './PlanningView';
+import {
+    getFilieres, createFiliere, updateFiliere,
+    getCursusList, createCursus, updateCursus,
+    getPromotions, createPromotion, updatePromotion,
+    getEleves, updateEleve,
+    getFormateurs,
+    getCoursDonnes, createCoursDonne, updateCoursDonne, deleteCoursDonne,
+} from '../../../services/refAdminService/refadminService.js';
 
 const TABS = [
     { key: "filieres", label: "Filières" },
@@ -98,43 +24,115 @@ const ADD_ACTION_LABELS = {
     filieres: "Ajouter une filière",
     cursus: "Ajouter un cursus",
     promotions: "Ajouter une promotion",
-    eleves: "Ajouter un élève",
+    eleves: null,
 };
 
-const emptyFiliereForm = { nom: "" };
-const emptyPromoForm = { formationId: "", cursus: "", nom: "", enCours: false, eleves: [] };
+const emptyFiliereForm = { code: "", nom: "" };
+const emptyCursusForm = { filiere_id: "", code: "", libelle: "" };
+const emptyPromoForm = { filiere_id: "", nom: "", date_debut: "", date_fin: "" };
+const emptyCoursDonneForm = { promotion_id: "", cours_id: "", formateur_id: "", date_debut: "", date_fin: "" };
+
+const inputClass =
+    "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20";
+const thClass = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500";
+const tdClass = "px-3 py-3 text-sm text-slate-900";
+const editButtonClass =
+    "rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700";
+
+function isEnCours(dateDebut, dateFin) {
+    if (!dateDebut || !dateFin) return false;
+    const today = new Date();
+    return today >= new Date(dateDebut) && today <= new Date(dateFin);
+}
 
 export function RefadminView() {
-    const [filieres, setFilieres] = useState(initialFilieres);
-    const [cursusList, setCursusList] = useState(initialCursusList);
-    const [promotions, setPromotions] = useState(initialPromotions);
+    const [filieres, setFilieres] = useState([]);
+    const [cursusList, setCursusList] = useState([]);
+    const [promotions, setPromotions] = useState([]);
+    const [eleves, setEleves] = useState([]);
+    const [formateurs, setFormateurs] = useState([]);
+    const [coursDonnes, setCoursDonnes] = useState([]);
+
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(null);
+
     const [activeTab, setActiveTab] = useState("filieres");
 
-    // --- Filière (ajout / édition) ---
+    // --- Toast de confirmation d'action ---
+    const [toast, setToast] = useState(null); // { message: string, type: 'success' | 'error' }
+
+    const showToast = (message, type = "success") => {
+        setToast({ message, type });
+        window.clearTimeout(showToast._t);
+        showToast._t = window.setTimeout(() => setToast(null), 2500);
+    };
+
+    // --- Filière ---
     const [isFiliereModalOpen, setIsFiliereModalOpen] = useState(false);
     const [editingFiliereId, setEditingFiliereId] = useState(null);
     const [filiereForm, setFiliereForm] = useState(emptyFiliereForm);
+    const [filiereError, setFiliereError] = useState(null);
 
-    // --- Cursus (ajout / édition) ---
+    // --- Cursus ---
     const [isCursusModalOpen, setIsCursusModalOpen] = useState(false);
     const [editingCursusId, setEditingCursusId] = useState(null);
-    const [cursusForm, setCursusForm] = useState({ nom: "" });
+    const [cursusForm, setCursusForm] = useState(emptyCursusForm);
+    const [cursusError, setCursusError] = useState(null);
 
-    // --- Promotion (ajout / édition, inclut la gestion des élèves) ---
+    // --- Promotion ---
     const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
-    const [editingPromoId, setEditingPromoId] = useState(null); // null si ajout
+    const [editingPromoId, setEditingPromoId] = useState(null);
     const [promoForm, setPromoForm] = useState(emptyPromoForm);
+    const [promoError, setPromoError] = useState(null);
+
+    // --- Planning (CoursDonne) ---
+    const [isCoursDonneModalOpen, setIsCoursDonneModalOpen] = useState(false);
+    const [editingCoursDonneId, setEditingCoursDonneId] = useState(null);
+    const [coursDonneForm, setCoursDonneForm] = useState(emptyCoursDonneForm);
+    const [coursDonneError, setCoursDonneError] = useState(null);
+
+    // --- Chargement initial ---
+    const loadAll = async () => {
+        setLoading(true);
+        setLoadError(null);
+        try {
+            const [filieresRes, cursusRes, promotionsRes, elevesRes, formateursRes, coursDonnesRes] = await Promise.all([
+                getFilieres(),
+                getCursusList(),
+                getPromotions(),
+                getEleves(),
+                getFormateurs(),
+                getCoursDonnes(),
+            ]);
+            setFilieres(filieresRes.data);
+            setCursusList(cursusRes.data);
+            setPromotions(promotionsRes.data);
+            setEleves(elevesRes.data);
+            setFormateurs(formateursRes.data);
+            setCoursDonnes(coursDonnesRes.data);
+        } catch (err) {
+            setLoadError("Impossible de charger les données. Vérifie que l'API est bien démarrée.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadAll();
+    }, []);
 
     // --- Filière : handlers ---
     const openAddFiliereModal = () => {
         setEditingFiliereId(null);
         setFiliereForm(emptyFiliereForm);
+        setFiliereError(null);
         setIsFiliereModalOpen(true);
     };
 
     const openEditFiliereModal = (item) => {
         setEditingFiliereId(item.id);
-        setFiliereForm({ nom: item.nom });
+        setFiliereForm({ code: item.code, nom: item.nom });
+        setFiliereError(null);
         setIsFiliereModalOpen(true);
     };
 
@@ -142,93 +140,92 @@ export function RefadminView() {
         setIsFiliereModalOpen(false);
         setEditingFiliereId(null);
         setFiliereForm(emptyFiliereForm);
+        setFiliereError(null);
     };
 
-    const handleFiliereSubmit = (e) => {
+    const handleFiliereSubmit = async (e) => {
         e.preventDefault();
-        if (!filiereForm.nom.trim()) return;
+        if (!filiereForm.nom.trim() || !filiereForm.code.trim()) return;
 
-        if (editingFiliereId !== null) {
-            setFilieres(
-                filieres.map((item) =>
-                    item.id === editingFiliereId ? { ...item, nom: filiereForm.nom.trim() } : item
-                )
-            );
-        } else {
-            const newEntry = {
-                id: filieres.length ? Math.max(...filieres.map((f) => f.id)) + 1 : 1,
-                nom: filiereForm.nom.trim(),
-            };
-            setFilieres([...filieres, newEntry]);
+        setFiliereError(null);
+        try {
+            if (editingFiliereId !== null) {
+                await updateFiliere(editingFiliereId, filiereForm);
+                showToast("Filière modifiée.");
+            } else {
+                await createFiliere(filiereForm);
+                showToast("Filière ajoutée.");
+            }
+            await loadAll();
+            closeFiliereModal();
+        } catch (err) {
+            setFiliereError("Erreur lors de l'enregistrement de la filière.");
         }
-
-        closeFiliereModal();
     };
 
     // --- Cursus : handlers ---
     const openAddCursusModal = () => {
         setEditingCursusId(null);
-        setCursusForm({ nom: "" });
+        setCursusForm({ ...emptyCursusForm, filiere_id: filieres[0] ? String(filieres[0].id) : "" });
+        setCursusError(null);
         setIsCursusModalOpen(true);
     };
 
     const openCursusEditModal = (cursusItem) => {
         setEditingCursusId(cursusItem.id);
-        setCursusForm({ nom: cursusItem.nom });
+        setCursusForm({
+            filiere_id: String(cursusItem.filiere?.id ?? ""),
+            code: cursusItem.code,
+            libelle: cursusItem.libelle,
+        });
+        setCursusError(null);
         setIsCursusModalOpen(true);
     };
 
     const closeCursusModal = () => {
         setIsCursusModalOpen(false);
         setEditingCursusId(null);
-        setCursusForm({ nom: "" });
+        setCursusForm(emptyCursusForm);
+        setCursusError(null);
     };
 
-    const handleCursusSubmit = (e) => {
+    const handleCursusSubmit = async (e) => {
         e.preventDefault();
-        if (!cursusForm.nom.trim()) return;
+        if (!cursusForm.libelle.trim() || !cursusForm.code.trim() || !cursusForm.filiere_id) return;
 
-        if (editingCursusId !== null) {
-            setCursusList(
-                cursusList.map((c) =>
-                    c.id === editingCursusId ? { ...c, nom: cursusForm.nom.trim() } : c
-                )
-            );
-        } else {
-            const newCursus = {
-                id: cursusList.length ? Math.max(...cursusList.map((c) => c.id)) + 1 : 1,
-                nom: cursusForm.nom.trim(),
-            };
-            setCursusList([...cursusList, newCursus]);
+        setCursusError(null);
+        try {
+            if (editingCursusId !== null) {
+                await updateCursus(editingCursusId, cursusForm);
+                showToast("Cursus modifié.");
+            } else {
+                await createCursus(cursusForm);
+                showToast("Cursus ajouté.");
+            }
+            await loadAll();
+            closeCursusModal();
+        } catch (err) {
+            setCursusError("Erreur lors de l'enregistrement du cursus.");
         }
-
-        closeCursusModal();
     };
 
     // --- Promotion : handlers ---
     const openAddPromoModal = () => {
         setEditingPromoId(null);
-        setPromoForm({
-            formationId: filieres[0] ? String(filieres[0].id) : "",
-            cursus: "",
-            nom: "",
-            enCours: false,
-            eleves: [],
-        });
+        setPromoForm({ ...emptyPromoForm, filiere_id: filieres[0] ? String(filieres[0].id) : "" });
+        setPromoError(null);
         setIsPromoModalOpen(true);
     };
 
-    const openPromoEditModal = (promoId) => {
-        const promo = promotions.find((p) => p.id === promoId);
-        if (!promo) return;
-        setEditingPromoId(promoId);
+    const openPromoEditModal = (promo) => {
+        setEditingPromoId(promo.id);
         setPromoForm({
-            formationId: String(promo.formationId),
-            cursus: promo.cursus,
+            filiere_id: String(promo.filiere?.id ?? ""),
             nom: promo.nom,
-            enCours: promo.enCours,
-            eleves: [...promo.eleves],
+            date_debut: promo.date_debut,
+            date_fin: promo.date_fin,
         });
+        setPromoError(null);
         setIsPromoModalOpen(true);
     };
 
@@ -236,46 +233,107 @@ export function RefadminView() {
         setIsPromoModalOpen(false);
         setEditingPromoId(null);
         setPromoForm(emptyPromoForm);
+        setPromoError(null);
     };
 
-    const handlePromoSubmit = (e) => {
+    const handlePromoSubmit = async (e) => {
         e.preventDefault();
-        if (!promoForm.nom.trim() || !promoForm.formationId) return;
+        if (!promoForm.nom.trim() || !promoForm.filiere_id || !promoForm.date_debut || !promoForm.date_fin) return;
 
-        if (editingPromoId !== null) {
-            setPromotions(
-                promotions.map((p) =>
-                    p.id === editingPromoId
-                        ? {
-                            ...p,
-                            formationId: Number(promoForm.formationId),
-                            cursus: promoForm.cursus,
-                            nom: promoForm.nom.trim(),
-                            enCours: promoForm.enCours,
-                            eleves: promoForm.eleves,
-                        }
-                        : p
-                )
-            );
-        } else {
-            const newPromo = {
-                id: promotions.length ? Math.max(...promotions.map((p) => p.id)) + 1 : 1,
-                formationId: Number(promoForm.formationId),
-                cursus: promoForm.cursus,
-                nom: promoForm.nom.trim(),
-                enCours: promoForm.enCours,
-                eleves: promoForm.eleves,
-            };
-            setPromotions([...promotions, newPromo]);
+        setPromoError(null);
+        try {
+            if (editingPromoId !== null) {
+                await updatePromotion(editingPromoId, promoForm);
+                showToast("Promotion modifiée.");
+            } else {
+                await createPromotion(promoForm);
+                showToast("Promotion ajoutée.");
+            }
+            await loadAll();
+            closePromoModal();
+        } catch (err) {
+            setPromoError("Erreur lors de l'enregistrement de la promotion.");
+        }
+    };
+
+    // --- Planning : handlers ---
+    const openAddCoursDonneModal = () => {
+        setEditingCoursDonneId(null);
+        setCoursDonneForm(emptyCoursDonneForm);
+        setCoursDonneError(null);
+        setIsCoursDonneModalOpen(true);
+    };
+
+    const openEditCoursDonneModal = (cd) => {
+        setEditingCoursDonneId(cd.id);
+        setCoursDonneForm({
+            promotion_id: String(cd.promotion?.id ?? ""),
+            cours_id: String(cd.cours?.id ?? ""),
+            formateur_id: String(cd.formateur?.id ?? ""),
+            date_debut: cd.date_debut,
+            date_fin: cd.date_fin ?? "",
+        });
+        setCoursDonneError(null);
+        setIsCoursDonneModalOpen(true);
+    };
+
+    const closeCoursDonneModal = () => {
+        setIsCoursDonneModalOpen(false);
+        setEditingCoursDonneId(null);
+        setCoursDonneForm(emptyCoursDonneForm);
+        setCoursDonneError(null);
+    };
+
+    const handleCoursDonneSubmit = async (e) => {
+        e.preventDefault();
+        if (!coursDonneForm.promotion_id || !coursDonneForm.cours_id || !coursDonneForm.formateur_id || !coursDonneForm.date_debut) {
+            return;
         }
 
-        closePromoModal();
+        const payload = {
+            ...coursDonneForm,
+            date_fin: coursDonneForm.date_fin || null,
+        };
+
+        setCoursDonneError(null);
+        try {
+            if (editingCoursDonneId !== null) {
+                await updateCoursDonne(editingCoursDonneId, payload);
+                showToast("Séance modifiée.");
+            } else {
+                await createCoursDonne(payload);
+                showToast("Séance ajoutée au planning.");
+            }
+            await loadAll();
+            closeCoursDonneModal();
+        } catch (err) {
+            setCoursDonneError("Erreur lors de l'enregistrement de la séance.");
+        }
     };
 
-    const toggleEnCours = (promoId) => {
-        setPromotions(
-            promotions.map((p) => (p.id === promoId ? { ...p, enCours: !p.enCours } : p))
-        );
+    const handleCoursDonneDelete = async () => {
+        if (editingCoursDonneId === null) return;
+        setCoursDonneError(null);
+        try {
+            await deleteCoursDonne(editingCoursDonneId);
+            await loadAll();
+            closeCoursDonneModal();
+            showToast("Séance supprimée.");
+        } catch (err) {
+            setCoursDonneError("Erreur lors de la suppression de la séance.");
+        }
+    };
+
+    // --- Élèves : réassignation de promotion ---
+    const handleReassignEleve = async (eleveId, promotionId) => {
+        if (!promotionId) return;
+        try {
+            await updateEleve(eleveId, { promotion_id: promotionId });
+            await loadAll();
+            showToast("Élève réassigné.");
+        } catch (err) {
+            showToast("Erreur lors de la réassignation.", "error");
+        }
     };
 
     // --- Bouton "+" contextuel ---
@@ -285,100 +343,80 @@ export function RefadminView() {
                 openAddCursusModal();
                 break;
             case "promotions":
-            case "eleves":
                 openAddPromoModal();
                 break;
             case "filieres":
-            default:
                 openAddFiliereModal();
+                break;
+            default:
                 break;
         }
     };
 
-    // --- Données dérivées ---
-    const filiereNom = (formationId) =>
-        filieres.find((f) => f.id === formationId)?.nom ?? "—";
-
-    const allPromotions = promotions.map((p) => ({
-        ...p,
-        filiere: filiereNom(p.formationId),
-    }));
-
-    const allEleves = promotions.flatMap((p) =>
-        p.eleves.map((eleve, eleveIndex) => ({
-            promoId: p.id,
-            eleveIndex,
-            nom: eleve,
-            promotion: p.nom,
-            filiere: filiereNom(p.formationId),
-        }))
-    );
+    // --- Données pour le modal Promo (élèves déjà chargés) ---
+    const editingPromoEleves = editingPromoId !== null
+        ? eleves.filter((e) => e.eleve_profile?.promotion?.id === editingPromoId)
+        : [];
 
     // --- Rendu du tableau selon l'onglet actif ---
     const renderTable = () => {
         switch (activeTab) {
             case "filieres":
                 return (
-                    <table style={styles.table}>
-                        <thead>
-                        <tr>
-                            <th style={styles.th}>ID</th>
-                            <th style={styles.th}>Nom</th>
-                            <th style={styles.th}>Nb promotions</th>
-                            <th style={styles.th}></th>
+                    <table className="w-full table-fixed border-collapse">
+                        <thead className="sticky top-0 bg-white">
+                        <tr className="border-b border-slate-200">
+                            <th className={thClass + " w-28"}>Code</th>
+                            <th className={thClass}>Nom</th>
+                            <th className={thClass + " w-36 text-right"}>Nb promotions</th>
+                            <th className={thClass + " w-14"}></th>
                         </tr>
                         </thead>
-                        <tbody>
-                        {filieres.map((f) => (
-                            <tr key={f.id}>
-                                <td style={styles.td}>{f.id}</td>
-                                <td style={styles.td}>{f.nom}</td>
-                                <td style={styles.td}>
-                                    {promotions.filter((p) => p.formationId === f.id).length}
-                                </td>
-                                <td style={styles.actionTd}>
-                                    <button
-                                        style={styles.editButton}
-                                        onClick={() => openEditFiliereModal(f)}
-                                        title="Modifier"
-                                    >
-                                        ✏️
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                        <tbody className="divide-y divide-slate-100">
+                        {filieres.length === 0 ? (
+                            <tr><td className={tdClass + " italic text-slate-500"} colSpan={4}>Aucune filière enregistrée.</td></tr>
+                        ) : (
+                            filieres.map((f) => (
+                                <tr key={f.id} className="transition-colors hover:bg-slate-50">
+                                    <td className={tdClass + " truncate"}>{f.code}</td>
+                                    <td className={tdClass + " truncate"}>{f.nom}</td>
+                                    <td className={tdClass + " text-right"}>
+                                        {promotions.filter((p) => p.filiere?.id === f.id).length}
+                                    </td>
+                                    <td className={tdClass + " text-right"}>
+                                        <button className={editButtonClass} onClick={() => openEditFiliereModal(f)} title="Modifier">
+                                            ✏️
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                         </tbody>
                     </table>
                 );
 
             case "cursus":
                 return (
-                    <table style={styles.table}>
-                        <thead>
-                        <tr>
-                            <th style={styles.th}>ID</th>
-                            <th style={styles.th}>Nom</th>
-                            <th style={styles.th}></th>
+                    <table className="w-full table-fixed border-collapse">
+                        <thead className="sticky top-0 bg-white">
+                        <tr className="border-b border-slate-200">
+                            <th className={thClass + " w-28"}>Code</th>
+                            <th className={thClass + " w-1/3"}>Libellé</th>
+                            <th className={thClass}>Filière</th>
+                            <th className={thClass + " w-14"}></th>
                         </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-slate-100">
                         {cursusList.length === 0 ? (
-                            <tr>
-                                <td style={styles.td} colSpan={3}>
-                                    Aucun cursus enregistré.
-                                </td>
-                            </tr>
+                            <tr><td className={tdClass + " italic text-slate-500"} colSpan={4}>Aucun cursus enregistré.</td></tr>
                         ) : (
                             cursusList.map((c) => (
-                                <tr key={c.id}>
-                                    <td style={styles.td}>{c.id}</td>
-                                    <td style={styles.td}>{c.nom}</td>
-                                    <td style={styles.actionTd}>
-                                        <button
-                                            style={styles.editButton}
-                                            onClick={() => openCursusEditModal(c)}
-                                            title="Modifier"
-                                        >
+                                <tr key={c.id} className="transition-colors hover:bg-slate-50">
+                                    <td className={tdClass + " truncate"}>{c.code}</td>
+                                    <td className={tdClass + " truncate"}>{c.libelle}</td>
+                                    <td className={tdClass + " truncate"}>{c.filiere?.nom}</td>
+                                    <td className={tdClass + " text-right"}>
+                                        <button className={editButtonClass} onClick={() => openCursusEditModal(c)} title="Modifier">
                                             ✏️
                                         </button>
                                     </td>
@@ -391,63 +429,61 @@ export function RefadminView() {
 
             case "promotions":
                 return (
-                    <table style={styles.table}>
-                        <thead>
-                        <tr>
-                            <th style={styles.th}>Promotion</th>
-                            <th style={styles.th}>Filière</th>
-                            <th style={styles.th}>Cursus</th>
-                            <th style={styles.th}>Statut</th>
-                            <th style={styles.th}>Élèves</th>
-                            <th style={styles.th}></th>
+                    <table className="w-full table-fixed border-collapse">
+                        <thead className="sticky top-0 bg-white">
+                        <tr className="border-b border-slate-200">
+                            <th className={thClass + " w-1/4"}>Promotion</th>
+                            <th className={thClass + " w-32"}>Filière</th>
+                            <th className={thClass + " w-48"}>Dates</th>
+                            <th className={thClass + " w-28"}>Statut</th>
+                            <th className={thClass + " w-24"}>Élèves</th>
+                            <th className={thClass + " w-14"}></th>
                         </tr>
                         </thead>
-                        <tbody>
-                        {allPromotions.length === 0 ? (
-                            <tr>
-                                <td style={styles.td} colSpan={6}>
-                                    Aucune promotion enregistrée.
-                                </td>
-                            </tr>
+                        <tbody className="divide-y divide-slate-100">
+                        {promotions.length === 0 ? (
+                            <tr><td className={tdClass + " italic text-slate-500"} colSpan={6}>Aucune promotion enregistrée.</td></tr>
                         ) : (
-                            allPromotions.map((p) => (
-                                <tr key={p.id}>
-                                    <td style={styles.td}>{p.nom}</td>
-                                    <td style={styles.td}>{p.filiere}</td>
-                                    <td style={styles.td}>{p.cursus}</td>
-                                    <td style={styles.td}>
-                                        <button
-                                            style={{
-                                                ...styles.statusPill,
-                                                ...(p.enCours ? styles.statusActive : styles.statusInactive),
-                                            }}
-                                            onClick={() => toggleEnCours(p.id)}
-                                            title="Cliquer pour changer le statut"
-                                        >
-                                            {p.enCours ? "En cours" : "Terminée"}
-                                        </button>
-                                    </td>
-                                    <td style={styles.td}>
-                      <span
-                          style={styles.badge}
-                          onClick={() => openPromoEditModal(p.id)}
-                          title="Voir / gérer les élèves"
-                      >
-                        Voir
-                        <span style={styles.badgeCount}>{p.eleves.length}</span>
-                      </span>
-                                    </td>
-                                    <td style={styles.actionTd}>
-                                        <button
-                                            style={styles.editButton}
-                                            onClick={() => openPromoEditModal(p.id)}
-                                            title="Modifier"
-                                        >
-                                            ✏️
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
+                            promotions.map((p) => {
+                                const enCours = isEnCours(p.date_debut, p.date_fin);
+                                const nbEleves = eleves.filter((e) => e.eleve_profile?.promotion?.id === p.id).length;
+                                return (
+                                    <tr key={p.id} className="transition-colors hover:bg-slate-50">
+                                        <td className={tdClass + " truncate"}>{p.nom}</td>
+                                        <td className={tdClass + " truncate"}>{p.filiere?.nom}</td>
+                                        <td className={tdClass + " truncate text-slate-500"}>{p.date_debut} → {p.date_fin}</td>
+                                        <td className={tdClass}>
+                                            <span
+                                                className={
+                                                    "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium " +
+                                                    (enCours
+                                                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                                        : "border-slate-200 bg-slate-100 text-slate-500")
+                                                }
+                                            >
+                                                {enCours ? "En cours" : "Terminée"}
+                                            </span>
+                                        </td>
+                                        <td className={tdClass}>
+                                            <span
+                                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
+                                                onClick={() => openPromoEditModal(p)}
+                                                title="Voir / gérer les élèves"
+                                            >
+                                                Voir
+                                                <span className="rounded-full bg-blue-600 px-1.5 text-[10px] font-semibold text-white">
+                                                    {nbEleves}
+                                                </span>
+                                            </span>
+                                        </td>
+                                        <td className={tdClass + " text-right"}>
+                                            <button className={editButtonClass} onClick={() => openPromoEditModal(p)} title="Modifier">
+                                                ✏️
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                         </tbody>
                     </table>
@@ -455,36 +491,37 @@ export function RefadminView() {
 
             case "eleves":
                 return (
-                    <table style={styles.table}>
-                        <thead>
-                        <tr>
-                            <th style={styles.th}>Nom</th>
-                            <th style={styles.th}>Promotion</th>
-                            <th style={styles.th}>Filière</th>
-                            <th style={styles.th}></th>
+                    <table className="w-full table-fixed border-collapse">
+                        <thead className="sticky top-0 bg-white">
+                        <tr className="border-b border-slate-200">
+                            <th className={thClass + " w-1/4"}>Nom</th>
+                            <th className={thClass + " w-1/3"}>Email</th>
+                            <th className={thClass + " w-1/5"}>Promotion actuelle</th>
+                            <th className={thClass}>Réassigner</th>
                         </tr>
                         </thead>
-                        <tbody>
-                        {allEleves.length === 0 ? (
-                            <tr>
-                                <td style={styles.td} colSpan={4}>
-                                    Aucun élève enregistré.
-                                </td>
-                            </tr>
+                        <tbody className="divide-y divide-slate-100">
+                        {eleves.length === 0 ? (
+                            <tr><td className={tdClass + " italic text-slate-500"} colSpan={4}>Aucun élève enregistré.</td></tr>
                         ) : (
-                            allEleves.map((e) => (
-                                <tr key={`${e.promoId}-${e.eleveIndex}`}>
-                                    <td style={styles.td}>{e.nom}</td>
-                                    <td style={styles.td}>{e.promotion}</td>
-                                    <td style={styles.td}>{e.filiere}</td>
-                                    <td style={styles.actionTd}>
-                                        <button
-                                            style={styles.editButton}
-                                            onClick={() => openPromoEditModal(e.promoId)}
-                                            title="Modifier (via la promotion)"
+                            eleves.map((e) => (
+                                <tr key={e.id} className="transition-colors hover:bg-slate-50">
+                                    <td className={tdClass + " truncate"}>{e.first_name} {e.last_name}</td>
+                                    <td className={tdClass + " truncate text-slate-500"}>{e.email}</td>
+                                    <td className={tdClass + " truncate"}>{e.eleve_profile?.promotion?.nom ?? "—"}</td>
+                                    <td className={tdClass}>
+                                        <select
+                                            className={inputClass + " max-w-xs"}
+                                            value={e.eleve_profile?.promotion?.id ?? ""}
+                                            onChange={(ev) => handleReassignEleve(e.id, ev.target.value)}
                                         >
-                                            ✏️
-                                        </button>
+                                            <option value="" disabled>— Changer de promotion —</option>
+                                            {promotions.map((p) => (
+                                                <option key={p.id} value={p.id}>
+                                                    {p.nom}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </td>
                                 </tr>
                             ))
@@ -498,34 +535,73 @@ export function RefadminView() {
         }
     };
 
+    if (loading) {
+        return (
+            <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+                Chargement...
+            </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="text-sm text-red-500">{loadError}</p>
+                <button
+                    className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                    onClick={loadAll}
+                >
+                    Réessayer
+                </button>
+            </div>
+        );
+    }
+
     return (
-        <div>
-            <div style={styles.section}>
-                <div style={styles.sectionHeader}>
-                    <div style={styles.tabsRow}>
+        <div className="space-y-6">
+            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-3">
+                    <div className="flex gap-1">
                         {TABS.map((tab) => (
                             <button
                                 key={tab.key}
-                                style={{
-                                    ...styles.tabButton,
-                                    ...(activeTab === tab.key ? styles.tabButtonActive : {}),
-                                }}
+                                className={
+                                    "border-b-2 px-4 py-2 text-sm font-medium transition-colors " +
+                                    (activeTab === tab.key
+                                        ? "border-blue-600 text-blue-600"
+                                        : "border-transparent text-slate-500 hover:text-slate-900")
+                                }
                                 onClick={() => setActiveTab(tab.key)}
                             >
                                 {tab.label}
                             </button>
                         ))}
                     </div>
-                    <button
-                        style={styles.addIconButton}
-                        onClick={handleAddButtonClick}
-                        title={ADD_ACTION_LABELS[activeTab]}
-                    >
-                        +
-                    </button>
+                    {ADD_ACTION_LABELS[activeTab] && (
+                        <button
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-lg font-medium text-white transition-colors hover:bg-blue-700"
+                            onClick={handleAddButtonClick}
+                            title={ADD_ACTION_LABELS[activeTab]}
+                        >
+                            +
+                        </button>
+                    )}
                 </div>
 
-                {renderTable()}
+                <div className="h-[420px] overflow-y-auto">
+                    {renderTable()}
+                </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="mb-4 border-b border-slate-200 pb-3">
+                    <span className="text-lg font-semibold text-slate-900">Planning</span>
+                </div>
+                <PlanningView
+                    coursDonnes={coursDonnes}
+                    onSelectCoursDonne={openEditCoursDonneModal}
+                    onAdd={openAddCoursDonneModal}
+                />
             </div>
 
             <FiliereModal
@@ -535,27 +611,61 @@ export function RefadminView() {
                 onChange={setFiliereForm}
                 onSubmit={handleFiliereSubmit}
                 onClose={closeFiliereModal}
+                error={filiereError}
             />
 
             <CursusModal
                 isOpen={isCursusModalOpen}
                 isEditing={editingCursusId !== null}
+                filieres={filieres}
                 form={cursusForm}
                 onChange={setCursusForm}
                 onSubmit={handleCursusSubmit}
                 onClose={closeCursusModal}
+                error={cursusError}
             />
 
             <PromoModal
                 isOpen={isPromoModalOpen}
                 isEditing={editingPromoId !== null}
-                formations={filieres}
-                cursusList={cursusList}
+                filieres={filieres}
                 form={promoForm}
                 onChange={setPromoForm}
                 onSubmit={handlePromoSubmit}
                 onClose={closePromoModal}
+                error={promoError}
+                eleves={editingPromoEleves}
+                elevesLoading={false}
+                onGoToEleves={() => {
+                    closePromoModal();
+                    setActiveTab("eleves");
+                }}
             />
+
+            <CoursDonneModal
+                isOpen={isCoursDonneModalOpen}
+                isEditing={editingCoursDonneId !== null}
+                promotions={promotions}
+                formateurs={formateurs}
+                cursusList={cursusList}
+                form={coursDonneForm}
+                onChange={setCoursDonneForm}
+                onSubmit={handleCoursDonneSubmit}
+                onClose={closeCoursDonneModal}
+                onDelete={handleCoursDonneDelete}
+                error={coursDonneError}
+            />
+
+            {toast && (
+                <div
+                    className={
+                        "fixed bottom-4 right-4 z-50 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg " +
+                        (toast.type === "error" ? "bg-red-500" : "bg-emerald-500")
+                    }
+                >
+                    {toast.message}
+                </div>
+            )}
         </div>
     );
 }

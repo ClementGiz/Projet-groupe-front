@@ -1,4 +1,4 @@
-import api from "./api";
+import api from "../api.js";
 
 export const login = async (username, password) => {
     const response = await api.post(
@@ -30,7 +30,7 @@ export const getCurrentUser = async () => {
     }
 
     try {
-        const response = await api.get("/auth/me/");
+        const response = await api.get("/auth/me");
 
         return response.data;
     } catch (error) {
