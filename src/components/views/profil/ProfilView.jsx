@@ -106,7 +106,7 @@ export default function ProfilView() {
     }
 
     return (
-        <div className="relative bg-white p-6 rounded-lg border border-slate-200 shadow-sm max-w-xl mx-auto w-full space-y-5">
+        <div className="relative bg-white p-6 rounded-lg border border-slate-200 shadow-sm max-w-xl mx-auto w-full space-y-5 my-8">
 
             {/* Toast Notification */}
             {toast && (
