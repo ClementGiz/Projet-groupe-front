@@ -131,9 +131,8 @@ export default function ProfilView() {
             <div className="border-b border-slate-200 pb-4 flex items-center justify-between">
                 <div>
                     <h2 className="font-semibold text-lg text-slate-900">Mon Profil</h2>
-                    <p className="text-xs text-slate-500 mt-0.5">@{formData.username}</p>
+                    <div>{renderRoleBadge(formData.role)}</div>
                 </div>
-                <div>{renderRoleBadge(formData.role)}</div>
             </div>
 
             {/* Formulaire */}
