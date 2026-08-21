@@ -659,7 +659,7 @@ export function RefadminView() {
             {toast && (
                 <div
                     className={
-                        "fixed bottom-4 right-4 z-50 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg " +
+                        "fixed bottom-4 right-4 z-50 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg transition-all animate-bounce" +
                         (toast.type === "error" ? "bg-red-500" : "bg-emerald-500")
                     }
                 >

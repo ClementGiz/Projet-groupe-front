@@ -236,8 +236,8 @@ export const Header = ({ user, onLogout }) => {
                                             Mon profil
                                         </Link>
 
-                                        <button
-                                            type="button"
+                                        <Link
+                                            to="/"
                                             onClick={handleLogout}
                                             className="
                                                 w-full
@@ -251,7 +251,7 @@ export const Header = ({ user, onLogout }) => {
                                             "
                                         >
                                             Se déconnecter
-                                        </button>
+                                        </Link>
 
                                     </div>
 

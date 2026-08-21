@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { createUser } from '../../../services/adminService/adminService.js';
+import React, { useState, useEffect } from 'react';
+import { createUser, getPromotions } from '../../../services/adminService/adminService.js';
 
 const INITIAL_FORM = {
     first_name: '',
@@ -7,13 +7,31 @@ const INITIAL_FORM = {
     username: '',
     email: '',
     role: 'ELEVE',
-    password: ''
+    password: '',
+    promotion_id: ''
 };
 
 export function AddUserModal({ isOpen, onClose, onSuccess }) {
     const [formData, setFormData] = useState(INITIAL_FORM);
+    const [promotions, setPromotions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            getPromotions()
+                .then((res) => {
+                    const data = Array.isArray(res.data) ? res.data : [];
+                    setPromotions(data);
+
+                    const defaultPromo = data.find(p => p.nom.toLowerCase().includes('attente')) || data[0];
+                    if (defaultPromo) {
+                        setFormData((prev) => ({ ...prev, promotion_id: defaultPromo.id }));
+                    }
+                })
+                .catch((err) => console.error("Erreur lors du chargement des promotions :", err));
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -27,8 +45,13 @@ export function AddUserModal({ isOpen, onClose, onSuccess }) {
         setLoading(true);
         setError(null);
 
+        const payload = { ...formData };
+        if (payload.role !== 'ELEVE') {
+            delete payload.promotion_id;
+        }
+
         try {
-            await createUser(formData);
+            await createUser(payload);
             setFormData(INITIAL_FORM);
             onSuccess();
             onClose();
@@ -126,6 +149,7 @@ export function AddUserModal({ isOpen, onClose, onSuccess }) {
                                 <option value="ADMIN">Administrateur</option>
                             </select>
                         </div>
+
                         <div>
                             <label className="block text-[12px] font-medium text-[#0F172A] mb-1">Mot de passe temporaire</label>
                             <input
@@ -138,6 +162,28 @@ export function AddUserModal({ isOpen, onClose, onSuccess }) {
                             />
                         </div>
                     </div>
+
+                    {formData.role === 'ELEVE' && (
+                        <div>
+                            <label className="block text-[12px] font-medium text-[#0F172A] mb-1">
+                                Promotion initiale <span className="text-[#EF4444]">*</span>
+                            </label>
+                            <select
+                                name="promotion_id"
+                                required
+                                value={formData.promotion_id}
+                                onChange={handleChange}
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[14px] text-[#0F172A] focus:border-[#2563EB] focus:outline-none"
+                            >
+                                <option value="">— Sélectionner une promotion —</option>
+                                {promotions.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.nom}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
                         <button
