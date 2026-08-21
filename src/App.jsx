@@ -5,7 +5,8 @@ import {useEffect, useState} from "react";
 import {Login} from "./components/views/Authenfication/Login.jsx";
 import {AdminView} from "./components/Views/Administrateur/AdminView.jsx";
 import {FormateurView} from "./components/Views/Formateur/FormateurView.jsx";
-import Profil from "./components/views/Profil/ProfilView.jsx";
+import ProfilView from "./components/views/profil/ProfilView.jsx"
+import StudentDashboardView from "./components/views/StudentDashboard/StudentDashboardView.jsx"
 import Header from "./components/layouts/header.jsx";
 import Footer from "./components/layouts/Footer.jsx";
 import {Routes, Route} from "react-router-dom";
@@ -56,8 +57,8 @@ export const App = () => {
                 return <RefadminView user={user} onLogout={handleLogout}/>;
             case "FORMATEUR":
                 return <FormateurView user={user} onLogout={handleLogout}/>;
-            /*case "ELEVE":
-                return <EleveView user={user} onLogout={handleLogout}/>;*/
+            case "ELEVE":
+                return <StudentDashboardView user={user} onLogout={handleLogout}/>;
             default:
                 return (
                     <div className="flex flex-col items-center justify-center p-12 text-center">
@@ -76,7 +77,7 @@ export const App = () => {
             <Header user={user} onLogout={handleLogout}/>
             <main className="flex-grow">
                 <Routes>
-                    <Route path="/profil" element={<Profil user={user} onLogout={handleLogout}/>}/>
+                    <Route path="/profil" element={<ProfilView user={user} onLogout={handleLogout}/>}/>
                     <Route path="/*" element={renderActiveView()}/>
 
                 </Routes>

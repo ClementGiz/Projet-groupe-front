@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-//import { getMyProfile, updateMyProfile } from '../../../services/profileService.js';
+import { getMyProfile, updateMyProfile } from "../../../services/profilService/profilService.js";
+
 export default function ProfilView() {
     // --- ÉTATS LOCAUX ---
     const [formData, setFormData] = useState({
@@ -105,7 +106,7 @@ export default function ProfilView() {
     }
 
     return (
-        <div className="relative bg-white p-6 rounded-lg border border-slate-200 shadow-sm max-w-xl mx-auto w-full space-y-5">
+        <div className="relative bg-white p-6 rounded-lg border border-slate-200 shadow-sm max-w-xl mx-auto w-full space-y-5 my-8">
 
             {/* Toast Notification */}
             {toast && (
@@ -130,9 +131,8 @@ export default function ProfilView() {
             <div className="border-b border-slate-200 pb-4 flex items-center justify-between">
                 <div>
                     <h2 className="font-semibold text-lg text-slate-900">Mon Profil</h2>
-                    <p className="text-xs text-slate-500 mt-0.5">@{formData.username}</p>
+                    <div>{renderRoleBadge(formData.role)}</div>
                 </div>
-                <div>{renderRoleBadge(formData.role)}</div>
             </div>
 
             {/* Formulaire */}
